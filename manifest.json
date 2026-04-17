@@ -2,7 +2,7 @@
   "name": "スロット収支管理",
   "short_name": "Slot",
   "description": "スロット収支を記録・分析するアプリ",
-  "start_url": "./slot-tracker.html",
+  "start_url": "./index.html",
   "scope": "./",
   "display": "standalone",
   "orientation": "portrait",

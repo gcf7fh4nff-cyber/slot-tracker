@@ -269,9 +269,12 @@ svg text{font-family:-apple-system,BlinkMacSystemFont,'Hiragino Sans',sans-serif
 <div class="toast" id="toast"></div>
 
 <script>
+// ===== IndexedDB Storage Layer =====
+// DB名: SlotTrackerDB / バージョン1
+// ストア: records(収支レコード), settings(key-valueの設定類)
 var DB_NAME='SlotTrackerDB',DB_VER=1,DB=null;
 var R=[],edId=null,curHPer='all',curGPer='all',curUnit='yen',MEDAL_RATE=20;
-var SHOP_MEDALS={};
+var SHOP_MEDALS={}; // 店舗別貯メダル初期値のメモリキャッシュ
 
 function openDB(){
   return new Promise(function(resolve,reject){
@@ -290,15 +293,76 @@ function openDB(){
     req.onerror=function(e){reject(e);};
   });
 }
-function dbGetAllRecords(){return new Promise(function(resolve,reject){var tx=DB.transaction('records','readonly');var req=tx.objectStore('records').getAll();req.onsuccess=function(e){resolve(e.target.result||[]);};req.onerror=function(e){reject(e);};});}
-function dbPutRecord(rec){return new Promise(function(resolve,reject){var tx=DB.transaction('records','readwrite');tx.objectStore('records').put(rec);tx.oncomplete=function(){resolve();};tx.onerror=function(e){reject(e);};});}
-function dbDeleteRecord(id){return new Promise(function(resolve,reject){var tx=DB.transaction('records','readwrite');tx.objectStore('records').delete(id);tx.oncomplete=function(){resolve();};tx.onerror=function(e){reject(e);};});}
-function dbClearRecords(){return new Promise(function(resolve,reject){var tx=DB.transaction('records','readwrite');tx.objectStore('records').clear();tx.oncomplete=function(){resolve();};tx.onerror=function(e){reject(e);};});}
-function dbBulkPutRecords(records){return new Promise(function(resolve,reject){if(!records||records.length===0){resolve();return;}var tx=DB.transaction('records','readwrite');var store=tx.objectStore('records');for(var i=0;i<records.length;i++){store.put(records[i]);}tx.oncomplete=function(){resolve();};tx.onerror=function(e){reject(e);};});}
-function dbGetSetting(key){return new Promise(function(resolve,reject){var tx=DB.transaction('settings','readonly');var req=tx.objectStore('settings').get(key);req.onsuccess=function(e){resolve(e.target.result?e.target.result.value:null);};req.onerror=function(e){reject(e);};});}
-function dbSetSetting(key,value){return new Promise(function(resolve,reject){var tx=DB.transaction('settings','readwrite');tx.objectStore('settings').put({key:key,value:value});tx.oncomplete=function(){resolve();};tx.onerror=function(e){reject(e);};});}
-function dbDeleteSetting(key){return new Promise(function(resolve,reject){var tx=DB.transaction('settings','readwrite');tx.objectStore('settings').delete(key);tx.oncomplete=function(){resolve();};tx.onerror=function(e){reject(e);};});}
 
+function dbGetAllRecords(){
+  return new Promise(function(resolve,reject){
+    var tx=DB.transaction('records','readonly');
+    var req=tx.objectStore('records').getAll();
+    req.onsuccess=function(e){resolve(e.target.result||[]);};
+    req.onerror=function(e){reject(e);};
+  });
+}
+function dbPutRecord(rec){
+  return new Promise(function(resolve,reject){
+    var tx=DB.transaction('records','readwrite');
+    tx.objectStore('records').put(rec);
+    tx.oncomplete=function(){resolve();};
+    tx.onerror=function(e){reject(e);};
+  });
+}
+function dbDeleteRecord(id){
+  return new Promise(function(resolve,reject){
+    var tx=DB.transaction('records','readwrite');
+    tx.objectStore('records').delete(id);
+    tx.oncomplete=function(){resolve();};
+    tx.onerror=function(e){reject(e);};
+  });
+}
+function dbClearRecords(){
+  return new Promise(function(resolve,reject){
+    var tx=DB.transaction('records','readwrite');
+    tx.objectStore('records').clear();
+    tx.oncomplete=function(){resolve();};
+    tx.onerror=function(e){reject(e);};
+  });
+}
+function dbBulkPutRecords(records){
+  return new Promise(function(resolve,reject){
+    if(!records||records.length===0){resolve();return;}
+    var tx=DB.transaction('records','readwrite');
+    var store=tx.objectStore('records');
+    for(var i=0;i<records.length;i++){store.put(records[i]);}
+    tx.oncomplete=function(){resolve();};
+    tx.onerror=function(e){reject(e);};
+  });
+}
+function dbGetSetting(key){
+  return new Promise(function(resolve,reject){
+    var tx=DB.transaction('settings','readonly');
+    var req=tx.objectStore('settings').get(key);
+    req.onsuccess=function(e){resolve(e.target.result?e.target.result.value:null);};
+    req.onerror=function(e){reject(e);};
+  });
+}
+function dbSetSetting(key,value){
+  return new Promise(function(resolve,reject){
+    var tx=DB.transaction('settings','readwrite');
+    tx.objectStore('settings').put({key:key,value:value});
+    tx.oncomplete=function(){resolve();};
+    tx.onerror=function(e){reject(e);};
+  });
+}
+function dbDeleteSetting(key){
+  return new Promise(function(resolve,reject){
+    var tx=DB.transaction('settings','readwrite');
+    tx.objectStore('settings').delete(key);
+    tx.oncomplete=function(){resolve();};
+    tx.onerror=function(e){reject(e);};
+  });
+}
+
+// ===== In-memory sync helpers =====
+// IndexedDBは非同期なので、一度メモリ(R, SHOP_MEDALS)に読み込んで既存の同期的なUIコードを維持
 function sortR(){R.sort(function(a,b){return a.date<b.date?-1:a.date>b.date?1:(a.ct||0)-(b.ct||0);});}
 
 async function initData(){
@@ -309,15 +373,37 @@ async function initData(){
   SHOP_MEDALS=sm||{};
 }
 
+// 旧コードとの互換レイヤー: 既存UIから呼ばれる関数名を維持
 function getShopMedals(){return SHOP_MEDALS;}
 async function saveShopMedals(obj){SHOP_MEDALS=obj;await dbSetSetting('shopMedals',obj);}
 
+// ===== UI Helpers =====
 function calcShopMedalBalance(shop){var sm=getShopMedals();var init=(sm[shop]||0);var delta=0;for(var i=0;i<R.length;i++){if(R[i].mInv!=null&&R[i].shop===shop){delta+=(R[i].mRet||0)-(R[i].mInv||0);}}return init+delta;}
 function getAllShopBalances(){var sm=getShopMedals();var shops={};for(var k in sm)shops[k]=1;for(var i=0;i<R.length;i++){if(R[i].shop&&R[i].mInv!=null)shops[R[i].shop]=1;}var result=[];for(var k in shops){if(!shops.hasOwnProperty(k))continue;var bal=calcShopMedalBalance(k);result.push({name:k,balance:bal,init:sm[k]||0});}return result.sort(function(a,b){return a.name<b.name?-1:1;});}
 
-async function addShopMedal(){var n=document.getElementById('newShopName').value.trim();if(!n){toast('店舗名を入力してください');return;}var sm=getShopMedals();if(sm[n]!=null){toast('この店舗は既に登録されています');return;}sm[n]=0;await saveShopMedals(sm);document.getElementById('newShopName').value='';renderShopSettings();updateShopDropdown();rSummary();toast(n+'を追加しました');}
-async function updateShopInit(shop,el){var v=parseInt(el.value)||0;var sm=getShopMedals();sm[shop]=v;await saveShopMedals(sm);rSummary();}
-async function removeShop(shop){if(!confirm(shop+'の貯メダル設定を削除しますか？'))return;var sm=getShopMedals();delete sm[shop];await saveShopMedals(sm);renderShopSettings();updateShopDropdown();rSummary();toast(shop+'を削除しました');}
+async function addShopMedal(){
+  var n=document.getElementById('newShopName').value.trim();
+  if(!n){toast('店舗名を入力してください');return;}
+  var sm=getShopMedals();
+  if(sm[n]!=null){toast('この店舗は既に登録されています');return;}
+  sm[n]=0;
+  await saveShopMedals(sm);
+  document.getElementById('newShopName').value='';
+  renderShopSettings();updateShopDropdown();rSummary();
+  toast(n+'を追加しました');
+}
+async function updateShopInit(shop,el){
+  var v=parseInt(el.value)||0;
+  var sm=getShopMedals();sm[shop]=v;
+  await saveShopMedals(sm);rSummary();
+}
+async function removeShop(shop){
+  if(!confirm(shop+'の貯メダル設定を削除しますか？'))return;
+  var sm=getShopMedals();delete sm[shop];
+  await saveShopMedals(sm);
+  renderShopSettings();updateShopDropdown();rSummary();
+  toast(shop+'を削除しました');
+}
 function renderShopSettings(){var el=document.getElementById('medalShopSettings');var sm=getShopMedals();var keys=Object.keys(sm).sort();if(keys.length===0){el.innerHTML='<p style="font-size:13px;color:#94a3b8;text-align:center;padding:8px 0">店舗を追加してください</p>';return;}var h='';for(var i=0;i<keys.length;i++){var k=keys[i],bal=calcShopMedalBalance(k);h+='<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;padding:10px;background:#f8fafc;border-radius:8px">';h+='<div style="flex:1;min-width:0"><div style="font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+esc(k)+'</div>';h+='<div style="font-size:11px;color:#64748b">現在: <b style="color:#f59e0b">'+bal.toLocaleString()+'枚</b></div></div>';h+='<div style="width:80px"><input type="number" value="'+sm[k]+'" inputmode="numeric" style="width:100%;padding:6px;border:1.5px solid #e2e8f0;border-radius:6px;font-size:13px;text-align:right" onchange="updateShopInit(\''+esc(k).replace(/'/g,"\\'")+'\',this)"></div>';h+='<button class="bi del" onclick="removeShop(\''+esc(k).replace(/'/g,"\\'")+'\')">🗑</button></div>';}el.innerHTML=h;}
 function gid(){return Date.now().toString(36)+Math.random().toString(36).substr(2,5);}
 function esc(s){var d=document.createElement('div');d.textContent=s;return d.innerHTML;}
@@ -326,57 +412,536 @@ function gc(n){return n>0?'plus':n<0?'minus':'zero';}
 function fd(s){var d=new Date(s+'T00:00:00');var w=['日','月','火','水','木','金','土'];return(d.getMonth()+1)+'/'+d.getDate()+'('+w[d.getDay()]+')';}
 function toast(m){var e=document.getElementById('toast');e.textContent=m;e.classList.add('sh');setTimeout(function(){e.classList.remove('sh');},2500);}
 
-function setUnit(u){curUnit=u;var yb=document.getElementById('uYen'),mb=document.getElementById('uMedal');if(u==='yen'){yb.style.background='#2563eb';yb.style.color='#fff';mb.style.background='transparent';mb.style.color='#64748b';document.getElementById('lInv').textContent='投資額（円）';document.getElementById('lRet').textContent='回収額（円）';document.getElementById('convertInfo').style.display='none';}else{mb.style.background='#2563eb';mb.style.color='#fff';yb.style.background='transparent';yb.style.color='#64748b';document.getElementById('lInv').textContent='投資（枚数）';document.getElementById('lRet').textContent='回収（枚数）';updateConvertInfo();}}
-function updateConvertInfo(){if(curUnit!=='medal'){document.getElementById('convertInfo').style.display='none';return;}var inv=parseInt(document.getElementById('iInv').value)||0;var ret=parseInt(document.getElementById('iRet').value)||0;if(inv===0&&ret===0){document.getElementById('convertInfo').style.display='none';return;}var yInv=inv*MEDAL_RATE,yRet=ret*MEDAL_RATE,pl=yRet-yInv;document.getElementById('convertInfo').innerHTML='→ 投資 '+yInv.toLocaleString()+'円 / 回収 '+yRet.toLocaleString()+'円（収支 '+fm(pl)+'円）';document.getElementById('convertInfo').style.display='block';}
+function setUnit(u){
+  curUnit=u;
+  var yb=document.getElementById('uYen'),mb=document.getElementById('uMedal');
+  if(u==='yen'){
+    yb.style.background='#2563eb';yb.style.color='#fff';
+    mb.style.background='transparent';mb.style.color='#64748b';
+    document.getElementById('lInv').textContent='投資額（円）';
+    document.getElementById('lRet').textContent='回収額（円）';
+    document.getElementById('convertInfo').style.display='none';
+  }else{
+    mb.style.background='#2563eb';mb.style.color='#fff';
+    yb.style.background='transparent';yb.style.color='#64748b';
+    document.getElementById('lInv').textContent='投資（枚数）';
+    document.getElementById('lRet').textContent='回収（枚数）';
+    updateConvertInfo();
+  }
+}
+function updateConvertInfo(){
+  if(curUnit!=='medal'){document.getElementById('convertInfo').style.display='none';return;}
+  var inv=parseInt(document.getElementById('iInv').value)||0;
+  var ret=parseInt(document.getElementById('iRet').value)||0;
+  if(inv===0&&ret===0){document.getElementById('convertInfo').style.display='none';return;}
+  var yInv=inv*MEDAL_RATE,yRet=ret*MEDAL_RATE,pl=yRet-yInv;
+  document.getElementById('convertInfo').innerHTML='→ 投資 '+yInv.toLocaleString()+'円 / 回収 '+yRet.toLocaleString()+'円（収支 '+fm(pl)+'円）';
+  document.getElementById('convertInfo').style.display='block';
+}
 
-function initDate(){var t=new Date(),y=t.getFullYear(),m=String(t.getMonth()+1).padStart(2,'0'),d=String(t.getDate()).padStart(2,'0');document.getElementById('iDate').value=y+'-'+m+'-'+d;}
+function initDate(){
+  var t=new Date(),y=t.getFullYear(),m=String(t.getMonth()+1).padStart(2,'0'),d=String(t.getDate()).padStart(2,'0');
+  document.getElementById('iDate').value=y+'-'+m+'-'+d;
+}
 
-function switchTab(name){var tabs=document.querySelectorAll('.tb');var contents=document.querySelectorAll('.tc');for(var i=0;i<tabs.length;i++){tabs[i].classList.remove('on');contents[i].classList.remove('on');}var idx={'input':0,'history':1,'stats':2,'graph':3,'settings':4}[name];tabs[idx].classList.add('on');contents[idx].classList.add('on');if(name==='history')rHist();if(name==='stats'){rMonth();rMc();}if(name==='graph'){rSlump();rBar();}if(name==='settings')renderShopSettings();}
+function switchTab(name){
+  var tabs=document.querySelectorAll('.tb');
+  var contents=document.querySelectorAll('.tc');
+  for(var i=0;i<tabs.length;i++){
+    tabs[i].classList.remove('on');
+    contents[i].classList.remove('on');
+  }
+  var idx={'input':0,'history':1,'stats':2,'graph':3,'settings':4}[name];
+  tabs[idx].classList.add('on');
+  contents[idx].classList.add('on');
+  if(name==='history')rHist();
+  if(name==='stats'){rMonth();rMc();}
+  if(name==='graph'){rSlump();rBar();}
+  if(name==='settings')renderShopSettings();
+}
 
-async function addRec(){var date=document.getElementById('iDate').value;var shop=document.getElementById('iShop').value.trim();var mc=document.getElementById('iMc').value.trim();var inv=parseInt(document.getElementById('iInv').value)||0;var ret=parseInt(document.getElementById('iRet').value)||0;var memo=document.getElementById('iMemo').value.trim();if(!date){toast('日付を入力してください');return;}if(!mc){toast('機種名を入力してください');return;}if(inv===0&&ret===0){toast('投資額か回収額を入力してください');return;}var mInv=null,mRet=null;if(curUnit==='medal'){mInv=inv;mRet=ret;inv=inv*MEDAL_RATE;ret=ret*MEDAL_RATE;}var pl=ret-inv;var rec={id:gid(),date:date,shop:shop,machine:mc,invest:inv,ret:ret,pl:pl,memo:memo,ct:Date.now()};if(mInv!==null){rec.mInv=mInv;rec.mRet=mRet;}if(shop&&mInv!==null){var sm=getShopMedals();if(sm[shop]==null){sm[shop]=0;await saveShopMedals(sm);updateShopDropdown();}}R.push(rec);sortR();await dbPutRecord(rec);document.getElementById('iMc').value='';document.getElementById('iInv').value='';document.getElementById('iRet').value='';document.getElementById('iMemo').value='';document.getElementById('convertInfo').style.display='none';initDate();toast('記録しました（'+fm(pl)+'円）');refresh();}
+// --- Input ---
+async function addRec(){
+  var date=document.getElementById('iDate').value;
+  var shop=document.getElementById('iShop').value.trim();
+  var mc=document.getElementById('iMc').value.trim();
+  var inv=parseInt(document.getElementById('iInv').value)||0;
+  var ret=parseInt(document.getElementById('iRet').value)||0;
+  var memo=document.getElementById('iMemo').value.trim();
+  if(!date){toast('日付を入力してください');return;}
+  if(!mc){toast('機種名を入力してください');return;}
+  if(inv===0&&ret===0){toast('投資額か回収額を入力してください');return;}
+  var mInv=null,mRet=null;
+  if(curUnit==='medal'){mInv=inv;mRet=ret;inv=inv*MEDAL_RATE;ret=ret*MEDAL_RATE;}
+  var pl=ret-inv;
+  var rec={id:gid(),date:date,shop:shop,machine:mc,invest:inv,ret:ret,pl:pl,memo:memo,ct:Date.now()};
+  if(mInv!==null){rec.mInv=mInv;rec.mRet=mRet;}
+  // 枚数モードで新規店舗なら貯メダル設定にも自動登録
+  if(shop&&mInv!==null){
+    var sm=getShopMedals();
+    if(sm[shop]==null){sm[shop]=0;await saveShopMedals(sm);updateShopDropdown();}
+  }
+  R.push(rec);sortR();
+  await dbPutRecord(rec);
+  document.getElementById('iMc').value='';
+  document.getElementById('iInv').value='';
+  document.getElementById('iRet').value='';
+  document.getElementById('iMemo').value='';
+  document.getElementById('convertInfo').style.display='none';
+  initDate();
+  toast('記録しました（'+fm(pl)+'円）');
+  refresh();
+}
 
-function updateShopDropdown(){var sel=document.getElementById('iShop');var cur=sel.value;var sm=getShopMedals();var keys=Object.keys(sm).sort();var h='<option value="">-- 店舗を選択 --</option>';for(var i=0;i<keys.length;i++){h+='<option value="'+esc(keys[i])+'">'+esc(keys[i])+'</option>';}sel.innerHTML=h;if(cur){for(var i=0;i<sel.options.length;i++){if(sel.options[i].value===cur){sel.value=cur;break;}}}}
+// --- Shop Dropdown ---
+function updateShopDropdown(){
+  var sel=document.getElementById('iShop');
+  var cur=sel.value;
+  var sm=getShopMedals();var keys=Object.keys(sm).sort();
+  var h='<option value="">-- 店舗を選択 --</option>';
+  for(var i=0;i<keys.length;i++){h+='<option value="'+esc(keys[i])+'">'+esc(keys[i])+'</option>';}
+  sel.innerHTML=h;
+  if(cur){for(var i=0;i<sel.options.length;i++){if(sel.options[i].value===cur){sel.value=cur;break;}}}
+}
 
+// --- Machine Suggestions ---
 function getMcNames(){var s={};for(var i=0;i<R.length;i++)s[R[i].machine]=1;return Object.keys(s).sort();}
-function showSug(){var v=document.getElementById('iMc').value.trim().toLowerCase();var box=document.getElementById('sgBox');if(!v){box.classList.remove('sh');return;}var names=getMcNames();var m=[];for(var i=0;i<names.length;i++){if(names[i].toLowerCase().indexOf(v)>=0)m.push(names[i]);}if(m.length===0){box.classList.remove('sh');return;}var h='';for(var i=0;i<m.length;i++){h+='<div class="sg-i" onmousedown="selMc(\''+esc(m[i]).replace(/'/g,"\\'")+'\')">'+esc(m[i])+'</div>';}box.innerHTML=h;box.classList.add('sh');}
+function showSug(){
+  var v=document.getElementById('iMc').value.trim().toLowerCase();
+  var box=document.getElementById('sgBox');
+  if(!v){box.classList.remove('sh');return;}
+  var names=getMcNames();
+  var m=[];for(var i=0;i<names.length;i++){if(names[i].toLowerCase().indexOf(v)>=0)m.push(names[i]);}
+  if(m.length===0){box.classList.remove('sh');return;}
+  var h='';for(var i=0;i<m.length;i++){h+='<div class="sg-i" onmousedown="selMc(\''+esc(m[i]).replace(/'/g,"\\'")+'\')">'+esc(m[i])+'</div>';}
+  box.innerHTML=h;box.classList.add('sh');
+}
 function hideSug(){document.getElementById('sgBox').classList.remove('sh');}
 function selMc(n){document.getElementById('iMc').value=n;hideSug();}
 
+// --- Cumulative map ---
 function cumMap(){var m={},c=0;for(var i=0;i<R.length;i++){c+=R[i].pl;m[R[i].id]=c;}return m;}
+
+// --- Summary bar ---
 function getTodayStr(){var t=new Date();return t.getFullYear()+'-'+String(t.getMonth()+1).padStart(2,'0')+'-'+String(t.getDate()).padStart(2,'0');}
 
-function rSummary(){var now=new Date(),ym=now.getFullYear()+'-'+String(now.getMonth()+1).padStart(2,'0');var today=getTodayStr();var mpl=0,tpl=0,wins=0,todayPL=0,todayInv=0,todayRet=0,todayCnt=0;for(var i=0;i<R.length;i++){tpl+=R[i].pl;if(R[i].pl>0)wins++;if(R[i].date.substring(0,7)===ym)mpl+=R[i].pl;if(R[i].date===today){todayPL+=R[i].pl;todayInv+=R[i].invest;todayRet+=R[i].ret;todayCnt++;}}var shopBals=getAllShopBalances();var hasShops=shopBals.length>0;var banner=document.getElementById('todayBanner');var medalOnly=document.getElementById('medalOnlyBanner');if(todayCnt>0){banner.style.display='block';var te=document.getElementById('sTodayPL');te.textContent=fm(todayPL)+'円';te.className=gc(todayPL);document.getElementById('sTodayDetail').textContent='投資 '+todayInv.toLocaleString()+'円 / 回収 '+todayRet.toLocaleString()+'円（'+todayCnt+'回稼働）';if(hasShops){var mh='';for(var i=0;i<shopBals.length;i++){if(i>0)mh+=' / ';mh+=shopBals[i].name+': '+shopBals[i].balance.toLocaleString()+'枚';}document.getElementById('sMedalBal').textContent=shopBals.length===1?shopBals[0].balance.toLocaleString()+'枚':'-';document.getElementById('sMedalDetail').innerHTML=shopBals.length===1?esc(shopBals[0].name):('<span style="font-size:9px">'+esc(mh)+'</span>');if(shopBals.length>1){document.getElementById('sMedalBal').style.fontSize='14px';document.getElementById('sMedalBal').textContent='';document.getElementById('sMedalDetail').innerHTML='';var multiH='';for(var i=0;i<shopBals.length;i++){multiH+='<div style="font-size:12px;margin-bottom:2px"><span style="color:#64748b">'+esc(shopBals[i].name)+'</span> <b style="color:#f59e0b">'+shopBals[i].balance.toLocaleString()+'枚</b></div>';}document.getElementById('sMedalBal').innerHTML=multiH;document.getElementById('sMedalBal').style.fontSize='inherit';}medalOnly.style.display='none';}else{document.getElementById('sMedalBal').textContent='-';document.getElementById('sMedalBal').style.fontSize='20px';document.getElementById('sMedalDetail').textContent='設定タブで店舗を追加';medalOnly.style.display='none';}}else if(hasShops){banner.style.display='none';medalOnly.style.display='block';var slEl=document.getElementById('medalShopList');var slH='';for(var i=0;i<shopBals.length;i++){slH+='<div style="display:flex;justify-content:space-between;align-items:center;padding:4px 0">';slH+='<span style="font-size:13px;color:#1e293b">'+esc(shopBals[i].name)+'</span>';slH+='<b style="font-size:15px;color:#f59e0b">'+shopBals[i].balance.toLocaleString()+'枚</b></div>';}slEl.innerHTML=slH;}else{banner.style.display='none';medalOnly.style.display='none';}var wr=R.length>0?Math.round(wins/R.length*100):0;var e1=document.getElementById('sMonth');e1.textContent=R.length?fm(mpl):'-';e1.className='v '+gc(mpl);var e2=document.getElementById('sTotal');e2.textContent=R.length?fm(tpl):'-';e2.className='v '+gc(tpl);var e3=document.getElementById('sWin');e3.textContent=R.length?wr+'%':'-';e3.className='v '+(wr>=50?'plus':wr>0?'minus':'zero');var sub=document.getElementById('hSub');if(R.length===0){sub.textContent='データなし';}else{var ti=0;for(var i=0;i<R.length;i++)ti+=R[i].invest;sub.textContent=R.length+'回稼働 / 総投資 '+ti.toLocaleString()+'円';}}
+function rSummary(){
+  var now=new Date(),ym=now.getFullYear()+'-'+String(now.getMonth()+1).padStart(2,'0');
+  var today=getTodayStr();
+  var mpl=0,tpl=0,wins=0,todayPL=0,todayInv=0,todayRet=0,todayCnt=0;
+  for(var i=0;i<R.length;i++){
+    tpl+=R[i].pl;
+    if(R[i].pl>0)wins++;
+    if(R[i].date.substring(0,7)===ym)mpl+=R[i].pl;
+    if(R[i].date===today){todayPL+=R[i].pl;todayInv+=R[i].invest;todayRet+=R[i].ret;todayCnt++;}
+  }
 
-function rRecent(){var el=document.getElementById('rcList');if(R.length===0){el.innerHTML='<div class="em"><div class="ic">📝</div><p>まだ記録がありません</p></div>';return;}var cm=cumMap(),h='',n=Math.min(5,R.length);for(var i=R.length-1;i>=R.length-n;i--){var r=R[i];h+='<div class="hi"><div class="hl"><div class="hd2">'+fd(r.date)+(r.shop?' @ '+esc(r.shop):'')+'</div><div class="hm">'+esc(r.machine)+'</div>';var dtl='投資 '+r.invest.toLocaleString()+' / 回収 '+r.ret.toLocaleString();if(r.mInv!=null)dtl+=' ('+r.mInv.toLocaleString()+'枚→'+r.mRet.toLocaleString()+'枚)';if(r.memo)dtl+=' / '+esc(r.memo);h+='<div class="hdt">'+dtl+'</div></div>';h+='<div class="hr"><div class="hp '+gc(r.pl)+'">'+fm(r.pl)+'</div><div class="hc">累計 '+fm(cm[r.id])+'</div></div></div>';}el.innerHTML=h;}
+  var shopBals=getAllShopBalances();
+  var hasShops=shopBals.length>0;
 
-function filterByPeriod(per){var f=[],now=new Date();if(per==='all')return R.slice();var cutoff=new Date(now);if(per==='month'){var ym=now.getFullYear()+'-'+String(now.getMonth()+1).padStart(2,'0');for(var i=0;i<R.length;i++){if(R[i].date.substring(0,7)===ym)f.push(R[i]);}return f;}if(per==='3m')cutoff.setMonth(cutoff.getMonth()-3);else if(per==='6m')cutoff.setMonth(cutoff.getMonth()-6);else if(per==='1y')cutoff.setFullYear(cutoff.getFullYear()-1);else if(per==='2y')cutoff.setFullYear(cutoff.getFullYear()-2);else if(per==='3y')cutoff.setFullYear(cutoff.getFullYear()-3);for(var i=0;i<R.length;i++){if(new Date(R[i].date+'T00:00:00')>=cutoff)f.push(R[i]);}return f;}
+  var banner=document.getElementById('todayBanner');
+  var medalOnly=document.getElementById('medalOnlyBanner');
+  if(todayCnt>0){
+    banner.style.display='block';
+    var te=document.getElementById('sTodayPL');
+    te.textContent=fm(todayPL)+'円';te.className=gc(todayPL);
+    document.getElementById('sTodayDetail').textContent='投資 '+todayInv.toLocaleString()+'円 / 回収 '+todayRet.toLocaleString()+'円（'+todayCnt+'回稼働）';
+    if(hasShops){
+      var mh='';
+      for(var i=0;i<shopBals.length;i++){
+        if(i>0)mh+=' / ';
+        mh+=shopBals[i].name+': '+shopBals[i].balance.toLocaleString()+'枚';
+      }
+      document.getElementById('sMedalBal').textContent=shopBals.length===1?shopBals[0].balance.toLocaleString()+'枚':'-';
+      document.getElementById('sMedalDetail').innerHTML=shopBals.length===1?esc(shopBals[0].name):('<span style="font-size:9px">'+esc(mh)+'</span>');
+      if(shopBals.length>1){
+        document.getElementById('sMedalBal').style.fontSize='14px';
+        document.getElementById('sMedalBal').textContent='';
+        document.getElementById('sMedalDetail').innerHTML='';
+        var multiH='';
+        for(var i=0;i<shopBals.length;i++){
+          multiH+='<div style="font-size:12px;margin-bottom:2px"><span style="color:#64748b">'+esc(shopBals[i].name)+'</span> <b style="color:#f59e0b">'+shopBals[i].balance.toLocaleString()+'枚</b></div>';
+        }
+        document.getElementById('sMedalBal').innerHTML=multiH;
+        document.getElementById('sMedalBal').style.fontSize='inherit';
+      }
+      medalOnly.style.display='none';
+    }else{
+      document.getElementById('sMedalBal').textContent='-';
+      document.getElementById('sMedalBal').style.fontSize='20px';
+      document.getElementById('sMedalDetail').textContent='設定タブで店舗を追加';
+      medalOnly.style.display='none';
+    }
+  }else if(hasShops){
+    banner.style.display='none';medalOnly.style.display='block';
+    var slEl=document.getElementById('medalShopList');
+    var slH='';
+    for(var i=0;i<shopBals.length;i++){
+      slH+='<div style="display:flex;justify-content:space-between;align-items:center;padding:4px 0">';
+      slH+='<span style="font-size:13px;color:#1e293b">'+esc(shopBals[i].name)+'</span>';
+      slH+='<b style="font-size:15px;color:#f59e0b">'+shopBals[i].balance.toLocaleString()+'枚</b></div>';
+    }
+    slEl.innerHTML=slH;
+  }else{
+    banner.style.display='none';medalOnly.style.display='none';
+  }
 
-function fHist(per,btn){curHPer=per;var bs=document.getElementById('hPeriod').querySelectorAll('.pb');for(var i=0;i<bs.length;i++)bs[i].classList.remove('on');if(btn)btn.classList.add('on');rHist();}
-function rHist(){var el=document.getElementById('hList'),f=filterByPeriod(curHPer);if(f.length===0){el.innerHTML='<div class="em"><div class="ic">📭</div><p>この期間のデータはありません</p></div>';return;}var cm=cumMap(),h='';for(var i=f.length-1;i>=0;i--){var r=f[i];h+='<div class="hi"><div class="hl"><div class="hd2">'+fd(r.date)+(r.shop?' @ '+esc(r.shop):'')+'</div><div class="hm">'+esc(r.machine)+'</div>';var dtl2='投資 '+r.invest.toLocaleString()+' / 回収 '+r.ret.toLocaleString();if(r.mInv!=null)dtl2+=' ('+r.mInv.toLocaleString()+'枚→'+r.mRet.toLocaleString()+'枚)';if(r.memo)dtl2+=' / '+esc(r.memo);h+='<div class="hdt">'+dtl2+'</div></div>';h+='<div class="hr"><div class="hp '+gc(r.pl)+'">'+fm(r.pl)+'</div><div class="hc">累計 '+fm(cm[r.id])+'</div>';h+='<div class="ha"><button class="bi edt" onclick="openEd(\''+r.id+'\')">✏️</button>';h+='<button class="bi del" onclick="delRec(\''+r.id+'\')">🗑</button></div></div></div>';}el.innerHTML=h;}
+  var wr=R.length>0?Math.round(wins/R.length*100):0;
+  var e1=document.getElementById('sMonth');e1.textContent=R.length?fm(mpl):'-';e1.className='v '+gc(mpl);
+  var e2=document.getElementById('sTotal');e2.textContent=R.length?fm(tpl):'-';e2.className='v '+gc(tpl);
+  var e3=document.getElementById('sWin');e3.textContent=R.length?wr+'%':'-';e3.className='v '+(wr>=50?'plus':wr>0?'minus':'zero');
+  var sub=document.getElementById('hSub');
+  if(R.length===0){sub.textContent='データなし';}
+  else{var ti=0;for(var i=0;i<R.length;i++)ti+=R[i].invest;sub.textContent=R.length+'回稼働 / 総投資 '+ti.toLocaleString()+'円';}
+}
 
-function openEd(id){edId=id;var r=null;for(var i=0;i<R.length;i++){if(R[i].id===id){r=R[i];break;}}if(!r)return;document.getElementById('eDate').value=r.date;document.getElementById('eShop').value=r.shop||'';document.getElementById('eMc').value=r.machine;document.getElementById('eInv').value=r.invest;document.getElementById('eRet').value=r.ret;document.getElementById('eMInv').value=r.mInv!=null?r.mInv:'';document.getElementById('eMRet').value=r.mRet!=null?r.mRet:'';document.getElementById('eMemo').value=r.memo||'';document.getElementById('edMo').classList.add('sh');}
-async function saveEd(){var updatedRec=null;for(var i=0;i<R.length;i++){if(R[i].id===edId){R[i].date=document.getElementById('eDate').value;R[i].shop=document.getElementById('eShop').value.trim();R[i].machine=document.getElementById('eMc').value.trim();R[i].invest=parseInt(document.getElementById('eInv').value)||0;R[i].ret=parseInt(document.getElementById('eRet').value)||0;R[i].pl=R[i].ret-R[i].invest;var emInv=document.getElementById('eMInv').value;var emRet=document.getElementById('eMRet').value;if(emInv!==''){R[i].mInv=parseInt(emInv)||0;R[i].mRet=parseInt(emRet)||0;}else{delete R[i].mInv;delete R[i].mRet;}R[i].memo=document.getElementById('eMemo').value.trim();updatedRec=R[i];break;}}sortR();if(updatedRec)await dbPutRecord(updatedRec);document.getElementById('edMo').classList.remove('sh');toast('更新しました');refresh();}
-async function delRec(id){if(!confirm('この記録を削除しますか？'))return;var n=[];for(var i=0;i<R.length;i++){if(R[i].id!==id)n.push(R[i]);}R=n;await dbDeleteRecord(id);toast('削除しました');refresh();}
+// --- Recent list ---
+function rRecent(){
+  var el=document.getElementById('rcList');
+  if(R.length===0){el.innerHTML='<div class="em"><div class="ic">📝</div><p>まだ記録がありません</p></div>';return;}
+  var cm=cumMap(),h='',n=Math.min(5,R.length);
+  for(var i=R.length-1;i>=R.length-n;i--){
+    var r=R[i];
+    h+='<div class="hi"><div class="hl"><div class="hd2">'+fd(r.date)+(r.shop?' @ '+esc(r.shop):'')+'</div><div class="hm">'+esc(r.machine)+'</div>';
+    var dtl='投資 '+r.invest.toLocaleString()+' / 回収 '+r.ret.toLocaleString();
+    if(r.mInv!=null)dtl+=' ('+r.mInv.toLocaleString()+'枚→'+r.mRet.toLocaleString()+'枚)';
+    if(r.memo)dtl+=' / '+esc(r.memo);
+    h+='<div class="hdt">'+dtl+'</div></div>';
+    h+='<div class="hr"><div class="hp '+gc(r.pl)+'">'+fm(r.pl)+'</div><div class="hc">累計 '+fm(cm[r.id])+'</div></div></div>';
+  }
+  el.innerHTML=h;
+}
 
-function rMonth(){var el=document.getElementById('mStats');if(R.length===0){el.innerHTML='<div class="em"><p>データがありません</p></div>';return;}var ms={};for(var i=0;i<R.length;i++){var m=R[i].date.substring(0,7);if(!ms[m])ms[m]={inv:0,ret:0,pl:0,cnt:0,w:0};ms[m].inv+=R[i].invest;ms[m].ret+=R[i].ret;ms[m].pl+=R[i].pl;ms[m].cnt++;if(R[i].pl>0)ms[m].w++;}var keys=Object.keys(ms).sort(),cum={},c=0;for(var i=0;i<keys.length;i++){c+=ms[keys[i]].pl;cum[keys[i]]=c;}keys.reverse();var h='<table class="st"><thead><tr><th>月</th><th>回数</th><th>収支</th><th>累計</th></tr></thead><tbody>';for(var i=0;i<keys.length;i++){var k=keys[i],d=ms[k],p=k.split('-');h+='<tr><td class="ml">'+p[0]+'/'+p[1]+'</td><td>'+d.cnt+'回</td>';h+='<td class="'+gc(d.pl)+'" style="font-weight:600">'+fm(d.pl)+'</td>';h+='<td class="'+gc(cum[k])+'">'+fm(cum[k])+'</td></tr>';}h+='</tbody></table>';el.innerHTML=h;}
+// --- Period filter ---
+function filterByPeriod(per){
+  var f=[],now=new Date();
+  if(per==='all')return R.slice();
+  var cutoff=new Date(now);
+  if(per==='month'){
+    var ym=now.getFullYear()+'-'+String(now.getMonth()+1).padStart(2,'0');
+    for(var i=0;i<R.length;i++){if(R[i].date.substring(0,7)===ym)f.push(R[i]);}return f;
+  }
+  if(per==='3m')cutoff.setMonth(cutoff.getMonth()-3);
+  else if(per==='6m')cutoff.setMonth(cutoff.getMonth()-6);
+  else if(per==='1y')cutoff.setFullYear(cutoff.getFullYear()-1);
+  else if(per==='2y')cutoff.setFullYear(cutoff.getFullYear()-2);
+  else if(per==='3y')cutoff.setFullYear(cutoff.getFullYear()-3);
+  for(var i=0;i<R.length;i++){if(new Date(R[i].date+'T00:00:00')>=cutoff)f.push(R[i]);}
+  return f;
+}
 
-function rMc(){var el=document.getElementById('kStats');if(R.length===0){el.innerHTML='<div class="em"><p>データがありません</p></div>';return;}var ms={};for(var i=0;i<R.length;i++){var m=R[i].machine;if(!ms[m])ms[m]={inv:0,ret:0,pl:0,cnt:0,w:0};ms[m].inv+=R[i].invest;ms[m].ret+=R[i].ret;ms[m].pl+=R[i].pl;ms[m].cnt++;if(R[i].pl>0)ms[m].w++;}var arr=[];for(var k in ms)arr.push([k,ms[k]]);arr.sort(function(a,b){return b[1].pl-a[1].pl;});var h='<table class="st"><thead><tr><th>機種</th><th>回数</th><th>収支</th><th>勝率</th></tr></thead><tbody>';for(var i=0;i<arr.length;i++){var n=arr[i][0],d=arr[i][1],wr=Math.round(d.w/d.cnt*100);h+='<tr><td class="ml" style="font-size:12px">'+esc(n)+'</td><td>'+d.cnt+'</td>';h+='<td class="'+gc(d.pl)+'" style="font-weight:600">'+fm(d.pl)+'</td>';h+='<td>'+wr+'%<div class="wr"><div class="wf" style="width:'+wr+'%"></div></div></td></tr>';}h+='</tbody></table>';el.innerHTML=h;}
+// --- History ---
+function fHist(per,btn){
+  curHPer=per;
+  var bs=document.getElementById('hPeriod').querySelectorAll('.pb');
+  for(var i=0;i<bs.length;i++)bs[i].classList.remove('on');
+  if(btn)btn.classList.add('on');
+  rHist();
+}
+function rHist(){
+  var el=document.getElementById('hList'),f=filterByPeriod(curHPer);
+  if(f.length===0){el.innerHTML='<div class="em"><div class="ic">📭</div><p>この期間のデータはありません</p></div>';return;}
+  var cm=cumMap(),h='';
+  for(var i=f.length-1;i>=0;i--){
+    var r=f[i];
+    h+='<div class="hi"><div class="hl"><div class="hd2">'+fd(r.date)+(r.shop?' @ '+esc(r.shop):'')+'</div><div class="hm">'+esc(r.machine)+'</div>';
+    var dtl2='投資 '+r.invest.toLocaleString()+' / 回収 '+r.ret.toLocaleString();
+    if(r.mInv!=null)dtl2+=' ('+r.mInv.toLocaleString()+'枚→'+r.mRet.toLocaleString()+'枚)';
+    if(r.memo)dtl2+=' / '+esc(r.memo);
+    h+='<div class="hdt">'+dtl2+'</div></div>';
+    h+='<div class="hr"><div class="hp '+gc(r.pl)+'">'+fm(r.pl)+'</div><div class="hc">累計 '+fm(cm[r.id])+'</div>';
+    h+='<div class="ha"><button class="bi edt" onclick="openEd(\''+r.id+'\')">✏️</button>';
+    h+='<button class="bi del" onclick="delRec(\''+r.id+'\')">🗑</button></div></div></div>';
+  }
+  el.innerHTML=h;
+}
 
-function rSlump(){var box=document.getElementById('slumpBox');var f=filterByPeriod(curGPer);if(f.length===0){box.innerHTML='<div class="em"><p>データがありません</p></div>';return;}var startCum=0;if(curGPer!=='all'&&f.length>0){for(var i=0;i<R.length;i++){if(R[i].id===f[0].id)break;startCum+=R[i].pl;}}var pts=[startCum],labels=['開始'];var c=startCum;for(var i=0;i<f.length;i++){c+=f[i].pl;pts.push(c);labels.push(fd(f[i].date));}var W=Math.max(320,pts.length*40),H=220,pad={t:20,r:20,b:40,l:60};var gw=W-pad.l-pad.r,gh=H-pad.t-pad.b;var mn=Math.min.apply(null,pts),mx=Math.max.apply(null,pts);if(mn===mx){mn-=1000;mx+=1000;}var range=mx-mn,margin=range*0.1;mn-=margin;mx+=margin;function gx(i){return pad.l+(i/(pts.length-1))*gw;}function gy(v){return pad.t+(1-(v-mn)/(mx-mn))*gh;}var lineColor=pts[pts.length-1]>=0?'#dc2626':'#2563eb';var fillColor=pts[pts.length-1]>=0?'rgba(220,38,38,0.1)':'rgba(37,99,235,0.1)';var pathD='M'+gx(0)+','+gy(pts[0]);for(var i=1;i<pts.length;i++)pathD+=' L'+gx(i)+','+gy(pts[i]);var fillD=pathD+' L'+gx(pts.length-1)+','+gy(0)+' L'+gx(0)+','+gy(0)+' Z';var zeroY=gy(0);if(zeroY<pad.t)zeroY=pad.t;if(zeroY>H-pad.b)zeroY=H-pad.b;var yTicks=5,yLabels='';for(var i=0;i<=yTicks;i++){var v=mn+(mx-mn)*(1-i/yTicks);var y=pad.t+(i/yTicks)*gh;var label=Math.round(v/1000)+'k';yLabels+='<text x="'+(pad.l-8)+'" y="'+(y+4)+'" text-anchor="end" fill="#94a3b8" font-size="10">'+label+'</text>';yLabels+='<line x1="'+pad.l+'" y1="'+y+'" x2="'+(W-pad.r)+'" y2="'+y+'" stroke="#e2e8f0" stroke-width="1"/>';}var xLabels='',step=Math.max(1,Math.floor(pts.length/6));for(var i=0;i<pts.length;i+=step){xLabels+='<text x="'+gx(i)+'" y="'+(H-pad.b+16)+'" text-anchor="middle" fill="#94a3b8" font-size="9">'+labels[i]+'</text>';}if((pts.length-1)%step!==0){xLabels+='<text x="'+gx(pts.length-1)+'" y="'+(H-pad.b+16)+'" text-anchor="middle" fill="#94a3b8" font-size="9">'+labels[pts.length-1]+'</text>';}var svg='<svg width="'+W+'" height="'+H+'" viewBox="0 0 '+W+' '+H+'" xmlns="http://www.w3.org/2000/svg">';svg+=yLabels+xLabels;svg+='<line x1="'+pad.l+'" y1="'+zeroY+'" x2="'+(W-pad.r)+'" y2="'+zeroY+'" stroke="#94a3b8" stroke-width="1" stroke-dasharray="4,4"/>';svg+='<path d="'+fillD+'" fill="'+fillColor+'"/>';svg+='<path d="'+pathD+'" fill="none" stroke="'+lineColor+'" stroke-width="2.5" stroke-linejoin="round"/>';if(pts.length<=30){for(var i=0;i<pts.length;i++){svg+='<circle cx="'+gx(i)+'" cy="'+gy(pts[i])+'" r="3.5" fill="'+lineColor+'" stroke="#fff" stroke-width="1.5"/>';}}svg+='</svg>';box.innerHTML=svg;}
+// --- Edit / Delete ---
+function openEd(id){
+  edId=id;var r=null;for(var i=0;i<R.length;i++){if(R[i].id===id){r=R[i];break;}}
+  if(!r)return;
+  document.getElementById('eDate').value=r.date;
+  document.getElementById('eShop').value=r.shop||'';
+  document.getElementById('eMc').value=r.machine;
+  document.getElementById('eInv').value=r.invest;
+  document.getElementById('eRet').value=r.ret;
+  document.getElementById('eMInv').value=r.mInv!=null?r.mInv:'';
+  document.getElementById('eMRet').value=r.mRet!=null?r.mRet:'';
+  document.getElementById('eMemo').value=r.memo||'';
+  document.getElementById('edMo').classList.add('sh');
+}
+async function saveEd(){
+  var updatedRec=null;
+  for(var i=0;i<R.length;i++){
+    if(R[i].id===edId){
+      R[i].date=document.getElementById('eDate').value;
+      R[i].shop=document.getElementById('eShop').value.trim();
+      R[i].machine=document.getElementById('eMc').value.trim();
+      R[i].invest=parseInt(document.getElementById('eInv').value)||0;
+      R[i].ret=parseInt(document.getElementById('eRet').value)||0;
+      R[i].pl=R[i].ret-R[i].invest;
+      var emInv=document.getElementById('eMInv').value;
+      var emRet=document.getElementById('eMRet').value;
+      if(emInv!==''){R[i].mInv=parseInt(emInv)||0;R[i].mRet=parseInt(emRet)||0;}
+      else{delete R[i].mInv;delete R[i].mRet;}
+      R[i].memo=document.getElementById('eMemo').value.trim();
+      updatedRec=R[i];
+      break;
+    }
+  }
+  sortR();
+  if(updatedRec)await dbPutRecord(updatedRec);
+  document.getElementById('edMo').classList.remove('sh');
+  toast('更新しました');refresh();
+}
+async function delRec(id){
+  if(!confirm('この記録を削除しますか？'))return;
+  var n=[];for(var i=0;i<R.length;i++){if(R[i].id!==id)n.push(R[i]);}R=n;
+  await dbDeleteRecord(id);
+  toast('削除しました');refresh();
+}
 
-function fGraph(per,btn){curGPer=per;var bs=document.getElementById('gPeriod').querySelectorAll('.pb');for(var i=0;i<bs.length;i++)bs[i].classList.remove('on');if(btn)btn.classList.add('on');rSlump();rBar();}
+// --- Monthly Stats ---
+function rMonth(){
+  var el=document.getElementById('mStats');
+  if(R.length===0){el.innerHTML='<div class="em"><p>データがありません</p></div>';return;}
+  var ms={};
+  for(var i=0;i<R.length;i++){
+    var m=R[i].date.substring(0,7);
+    if(!ms[m])ms[m]={inv:0,ret:0,pl:0,cnt:0,w:0};
+    ms[m].inv+=R[i].invest;ms[m].ret+=R[i].ret;ms[m].pl+=R[i].pl;ms[m].cnt++;
+    if(R[i].pl>0)ms[m].w++;
+  }
+  var keys=Object.keys(ms).sort(),cum={},c=0;
+  for(var i=0;i<keys.length;i++){c+=ms[keys[i]].pl;cum[keys[i]]=c;}
+  keys.reverse();
+  var h='<table class="st"><thead><tr><th>月</th><th>回数</th><th>収支</th><th>累計</th></tr></thead><tbody>';
+  for(var i=0;i<keys.length;i++){
+    var k=keys[i],d=ms[k],p=k.split('-');
+    h+='<tr><td class="ml">'+p[0]+'/'+p[1]+'</td><td>'+d.cnt+'回</td>';
+    h+='<td class="'+gc(d.pl)+'" style="font-weight:600">'+fm(d.pl)+'</td>';
+    h+='<td class="'+gc(cum[k])+'">'+fm(cum[k])+'</td></tr>';
+  }
+  h+='</tbody></table>';el.innerHTML=h;
+}
 
-function rBar(){var box=document.getElementById('barBox');if(R.length===0){box.innerHTML='<div class="em"><p>データがありません</p></div>';return;}var ms={};for(var i=0;i<R.length;i++){var m=R[i].date.substring(0,7);if(!ms[m])ms[m]=0;ms[m]+=R[i].pl;}var keys=Object.keys(ms).sort();if(keys.length===0){box.innerHTML='';return;}var vals=[];for(var i=0;i<keys.length;i++)vals.push(ms[keys[i]]);var bw=36,gap=8,W=Math.max(320,keys.length*(bw+gap)+80),H=200,pad={t:20,r:20,b:40,l:60};var gw=W-pad.l-pad.r,gh=H-pad.t-pad.b;var mn=Math.min.apply(null,vals),mx=Math.max.apply(null,vals);if(mn>0)mn=0;if(mx<0)mx=0;if(mn===mx){mn-=1000;mx+=1000;}var range=mx-mn,margin=range*0.1;mn-=margin;mx+=margin;function gy(v){return pad.t+(1-(v-mn)/(mx-mn))*gh;}var zeroY=gy(0);var svg='<svg width="'+W+'" height="'+H+'" viewBox="0 0 '+W+' '+H+'" xmlns="http://www.w3.org/2000/svg">';var yTicks=4;for(var i=0;i<=yTicks;i++){var v=mn+(mx-mn)*(1-i/yTicks);var y=pad.t+(i/yTicks)*gh;svg+='<text x="'+(pad.l-8)+'" y="'+(y+4)+'" text-anchor="end" fill="#94a3b8" font-size="10">'+Math.round(v/1000)+'k</text>';svg+='<line x1="'+pad.l+'" y1="'+y+'" x2="'+(W-pad.r)+'" y2="'+y+'" stroke="#e2e8f0" stroke-width="1"/>';}svg+='<line x1="'+pad.l+'" y1="'+zeroY+'" x2="'+(W-pad.r)+'" y2="'+zeroY+'" stroke="#94a3b8" stroke-width="1"/>';var totalBW=(bw+gap)*keys.length-gap;var startX=pad.l+(gw-totalBW)/2;for(var i=0;i<keys.length;i++){var x=startX+i*(bw+gap),v=vals[i];var barY=v>=0?gy(v):zeroY;var barH=Math.abs(gy(v)-zeroY);if(barH<1)barH=1;var col=v>=0?'rgba(220,38,38,0.7)':'rgba(37,99,235,0.7)';svg+='<rect x="'+x+'" y="'+barY+'" width="'+bw+'" height="'+barH+'" rx="3" fill="'+col+'"/>';var label=keys[i].split('-')[1]+'月';svg+='<text x="'+(x+bw/2)+'" y="'+(H-pad.b+16)+'" text-anchor="middle" fill="#94a3b8" font-size="10">'+label+'</text>';}svg+='</svg>';box.innerHTML=svg;}
+// --- Machine Stats ---
+function rMc(){
+  var el=document.getElementById('kStats');
+  if(R.length===0){el.innerHTML='<div class="em"><p>データがありません</p></div>';return;}
+  var ms={};
+  for(var i=0;i<R.length;i++){
+    var m=R[i].machine;
+    if(!ms[m])ms[m]={inv:0,ret:0,pl:0,cnt:0,w:0};
+    ms[m].inv+=R[i].invest;ms[m].ret+=R[i].ret;ms[m].pl+=R[i].pl;ms[m].cnt++;
+    if(R[i].pl>0)ms[m].w++;
+  }
+  var arr=[];for(var k in ms)arr.push([k,ms[k]]);
+  arr.sort(function(a,b){return b[1].pl-a[1].pl;});
+  var h='<table class="st"><thead><tr><th>機種</th><th>回数</th><th>収支</th><th>勝率</th></tr></thead><tbody>';
+  for(var i=0;i<arr.length;i++){
+    var n=arr[i][0],d=arr[i][1],wr=Math.round(d.w/d.cnt*100);
+    h+='<tr><td class="ml" style="font-size:12px">'+esc(n)+'</td><td>'+d.cnt+'</td>';
+    h+='<td class="'+gc(d.pl)+'" style="font-weight:600">'+fm(d.pl)+'</td>';
+    h+='<td>'+wr+'%<div class="wr"><div class="wf" style="width:'+wr+'%"></div></div></td></tr>';
+  }
+  h+='</tbody></table>';el.innerHTML=h;
+}
 
-function expData(){var d=JSON.stringify({records:R,shopMedals:getShopMedals()},null,2);var b=new Blob([d],{type:'application/json'});var u=URL.createObjectURL(b);var a=document.createElement('a');var now=new Date();a.href=u;a.download='slot_backup_'+now.getFullYear()+String(now.getMonth()+1).padStart(2,'0')+String(now.getDate()).padStart(2,'0')+'.json';a.click();URL.revokeObjectURL(u);toast('バックアップを保存しました');}
-function impData(ev){var file=ev.target.files[0];if(!file)return;var reader=new FileReader();reader.onload=async function(e){try{var raw=JSON.parse(e.target.result);var data=Array.isArray(raw)?raw:(raw.records||[]);if(raw.shopMedals){await saveShopMedals(raw.shopMedals);}if(raw.initMedal!=null&&raw.initMedal>0){var sm=getShopMedals();if(Object.keys(sm).length===0){sm['デフォルト']=raw.initMedal;await saveShopMedals(sm);}}var ids={};for(var i=0;i<R.length;i++)ids[R[i].id]=1;var newRecs=[];for(var i=0;i<data.length;i++){if(!ids[data[i].id]){R.push(data[i]);newRecs.push(data[i]);}}sortR();await dbBulkPutRecords(newRecs);toast(newRecs.length+'件の新しいデータを追加しました');refresh();renderShopSettings();updateShopDropdown();}catch(err){console.error(err);toast('ファイルの読み込みに失敗しました');}};reader.readAsText(file);ev.target.value='';}
-async function clearAll(){R=[];await dbClearRecords();await dbDeleteSetting('shopMedals');SHOP_MEDALS={};document.getElementById('delMo').classList.remove('sh');toast('全データを削除しました');refresh();renderShopSettings();updateShopDropdown();}
+// --- SVG Slump Chart ---
+function rSlump(){
+  var box=document.getElementById('slumpBox');
+  var f=filterByPeriod(curGPer);
+  if(f.length===0){box.innerHTML='<div class="em"><p>データがありません</p></div>';return;}
+
+  var startCum=0;
+  if(curGPer!=='all'&&f.length>0){
+    for(var i=0;i<R.length;i++){
+      if(R[i].id===f[0].id)break;
+      startCum+=R[i].pl;
+    }
+  }
+
+  var pts=[startCum],labels=['開始'];
+  var c=startCum;
+  for(var i=0;i<f.length;i++){c+=f[i].pl;pts.push(c);labels.push(fd(f[i].date));}
+
+  var W=Math.max(320,pts.length*40),H=220,pad={t:20,r:20,b:40,l:60};
+  var gw=W-pad.l-pad.r,gh=H-pad.t-pad.b;
+  var mn=Math.min.apply(null,pts),mx=Math.max.apply(null,pts);
+  if(mn===mx){mn-=1000;mx+=1000;}
+  var range=mx-mn,margin=range*0.1;mn-=margin;mx+=margin;
+
+  function gx(i){return pad.l+(i/(pts.length-1))*gw;}
+  function gy(v){return pad.t+(1-(v-mn)/(mx-mn))*gh;}
+
+  var lineColor=pts[pts.length-1]>=0?'#dc2626':'#2563eb';
+  var fillColor=pts[pts.length-1]>=0?'rgba(220,38,38,0.1)':'rgba(37,99,235,0.1)';
+
+  var pathD='M'+gx(0)+','+gy(pts[0]);
+  for(var i=1;i<pts.length;i++)pathD+=' L'+gx(i)+','+gy(pts[i]);
+  var fillD=pathD+' L'+gx(pts.length-1)+','+gy(0)+' L'+gx(0)+','+gy(0)+' Z';
+
+  var zeroY=gy(0);
+  if(zeroY<pad.t)zeroY=pad.t;
+  if(zeroY>H-pad.b)zeroY=H-pad.b;
+
+  var yTicks=5,yLabels='';
+  for(var i=0;i<=yTicks;i++){
+    var v=mn+(mx-mn)*(1-i/yTicks);
+    var y=pad.t+(i/yTicks)*gh;
+    var label=Math.round(v/1000)+'k';
+    yLabels+='<text x="'+(pad.l-8)+'" y="'+(y+4)+'" text-anchor="end" fill="#94a3b8" font-size="10">'+label+'</text>';
+    yLabels+='<line x1="'+pad.l+'" y1="'+y+'" x2="'+(W-pad.r)+'" y2="'+y+'" stroke="#e2e8f0" stroke-width="1"/>';
+  }
+
+  var xLabels='',step=Math.max(1,Math.floor(pts.length/6));
+  for(var i=0;i<pts.length;i+=step){
+    xLabels+='<text x="'+gx(i)+'" y="'+(H-pad.b+16)+'" text-anchor="middle" fill="#94a3b8" font-size="9">'+labels[i]+'</text>';
+  }
+  if((pts.length-1)%step!==0){
+    xLabels+='<text x="'+gx(pts.length-1)+'" y="'+(H-pad.b+16)+'" text-anchor="middle" fill="#94a3b8" font-size="9">'+labels[pts.length-1]+'</text>';
+  }
+
+  var svg='<svg width="'+W+'" height="'+H+'" viewBox="0 0 '+W+' '+H+'" xmlns="http://www.w3.org/2000/svg">';
+  svg+=yLabels+xLabels;
+  svg+='<line x1="'+pad.l+'" y1="'+zeroY+'" x2="'+(W-pad.r)+'" y2="'+zeroY+'" stroke="#94a3b8" stroke-width="1" stroke-dasharray="4,4"/>';
+  svg+='<path d="'+fillD+'" fill="'+fillColor+'"/>';
+  svg+='<path d="'+pathD+'" fill="none" stroke="'+lineColor+'" stroke-width="2.5" stroke-linejoin="round"/>';
+  if(pts.length<=30){
+    for(var i=0;i<pts.length;i++){
+      svg+='<circle cx="'+gx(i)+'" cy="'+gy(pts[i])+'" r="3.5" fill="'+lineColor+'" stroke="#fff" stroke-width="1.5"/>';
+    }
+  }
+  svg+='</svg>';
+  box.innerHTML=svg;
+}
+
+function fGraph(per,btn){
+  curGPer=per;
+  var bs=document.getElementById('gPeriod').querySelectorAll('.pb');
+  for(var i=0;i<bs.length;i++)bs[i].classList.remove('on');
+  if(btn)btn.classList.add('on');
+  rSlump();rBar();
+}
+
+// --- SVG Bar Chart ---
+function rBar(){
+  var box=document.getElementById('barBox');
+  if(R.length===0){box.innerHTML='<div class="em"><p>データがありません</p></div>';return;}
+  var ms={};
+  for(var i=0;i<R.length;i++){
+    var m=R[i].date.substring(0,7);
+    if(!ms[m])ms[m]=0;ms[m]+=R[i].pl;
+  }
+  var keys=Object.keys(ms).sort();
+  if(keys.length===0){box.innerHTML='';return;}
+
+  var vals=[];for(var i=0;i<keys.length;i++)vals.push(ms[keys[i]]);
+  var bw=36,gap=8,W=Math.max(320,keys.length*(bw+gap)+80),H=200,pad={t:20,r:20,b:40,l:60};
+  var gw=W-pad.l-pad.r,gh=H-pad.t-pad.b;
+  var mn=Math.min.apply(null,vals),mx=Math.max.apply(null,vals);
+  if(mn>0)mn=0;if(mx<0)mx=0;
+  if(mn===mx){mn-=1000;mx+=1000;}
+  var range=mx-mn,margin=range*0.1;mn-=margin;mx+=margin;
+
+  function gy(v){return pad.t+(1-(v-mn)/(mx-mn))*gh;}
+  var zeroY=gy(0);
+
+  var svg='<svg width="'+W+'" height="'+H+'" viewBox="0 0 '+W+' '+H+'" xmlns="http://www.w3.org/2000/svg">';
+
+  var yTicks=4;
+  for(var i=0;i<=yTicks;i++){
+    var v=mn+(mx-mn)*(1-i/yTicks);var y=pad.t+(i/yTicks)*gh;
+    svg+='<text x="'+(pad.l-8)+'" y="'+(y+4)+'" text-anchor="end" fill="#94a3b8" font-size="10">'+Math.round(v/1000)+'k</text>';
+    svg+='<line x1="'+pad.l+'" y1="'+y+'" x2="'+(W-pad.r)+'" y2="'+y+'" stroke="#e2e8f0" stroke-width="1"/>';
+  }
+  svg+='<line x1="'+pad.l+'" y1="'+zeroY+'" x2="'+(W-pad.r)+'" y2="'+zeroY+'" stroke="#94a3b8" stroke-width="1"/>';
+
+  var totalBW=(bw+gap)*keys.length-gap;
+  var startX=pad.l+(gw-totalBW)/2;
+  for(var i=0;i<keys.length;i++){
+    var x=startX+i*(bw+gap),v=vals[i];
+    var barY=v>=0?gy(v):zeroY;
+    var barH=Math.abs(gy(v)-zeroY);
+    if(barH<1)barH=1;
+    var col=v>=0?'rgba(220,38,38,0.7)':'rgba(37,99,235,0.7)';
+    svg+='<rect x="'+x+'" y="'+barY+'" width="'+bw+'" height="'+barH+'" rx="3" fill="'+col+'"/>';
+    var label=keys[i].split('-')[1]+'月';
+    svg+='<text x="'+(x+bw/2)+'" y="'+(H-pad.b+16)+'" text-anchor="middle" fill="#94a3b8" font-size="10">'+label+'</text>';
+  }
+  svg+='</svg>';
+  box.innerHTML=svg;
+}
+
+// --- Backup ---
+function expData(){
+  var d=JSON.stringify({records:R,shopMedals:getShopMedals()},null,2);
+  var b=new Blob([d],{type:'application/json'});
+  var u=URL.createObjectURL(b);
+  var a=document.createElement('a');
+  var now=new Date();
+  a.href=u;a.download='slot_backup_'+now.getFullYear()+String(now.getMonth()+1).padStart(2,'0')+String(now.getDate()).padStart(2,'0')+'.json';
+  a.click();URL.revokeObjectURL(u);
+  toast('バックアップを保存しました');
+}
+function impData(ev){
+  var file=ev.target.files[0];if(!file)return;
+  var reader=new FileReader();
+  reader.onload=async function(e){
+    try{
+      var raw=JSON.parse(e.target.result);
+      var data=Array.isArray(raw)?raw:(raw.records||[]);
+      if(raw.shopMedals){await saveShopMedals(raw.shopMedals);}
+      if(raw.initMedal!=null&&raw.initMedal>0){
+        var sm=getShopMedals();
+        if(Object.keys(sm).length===0){sm['デフォルト']=raw.initMedal;await saveShopMedals(sm);}
+      }
+      var ids={};for(var i=0;i<R.length;i++)ids[R[i].id]=1;
+      var newRecs=[];
+      for(var i=0;i<data.length;i++){if(!ids[data[i].id]){R.push(data[i]);newRecs.push(data[i]);}}
+      sortR();
+      await dbBulkPutRecords(newRecs);
+      toast(newRecs.length+'件の新しいデータを追加しました');
+      refresh();renderShopSettings();updateShopDropdown();
+    }catch(err){console.error(err);toast('ファイルの読み込みに失敗しました');}
+  };
+  reader.readAsText(file);ev.target.value='';
+}
+async function clearAll(){
+  R=[];
+  await dbClearRecords();
+  await dbDeleteSetting('shopMedals');
+  SHOP_MEDALS={};
+  document.getElementById('delMo').classList.remove('sh');
+  toast('全データを削除しました');
+  refresh();renderShopSettings();updateShopDropdown();
+}
 
 function refresh(){rSummary();rRecent();}
 
-if('serviceWorker' in navigator){window.addEventListener('load',function(){navigator.serviceWorker.register('sw.js').then(function(reg){console.log('SW registered:',reg.scope);}).catch(function(err){console.log('SW failed:',err);});});}
+// ===== Service Worker登録 (PWAオフライン対応) =====
+if('serviceWorker' in navigator){
+  window.addEventListener('load',function(){
+    navigator.serviceWorker.register('sw.js')
+      .then(function(reg){console.log('SW registered:',reg.scope);})
+      .catch(function(err){console.log('SW failed:',err);});
+  });
+}
 
-(async function(){try{await initData();initDate();renderShopSettings();updateShopDropdown();refresh();}catch(e){console.error('初期化エラー:',e);toast('データ読み込みに失敗しました');}})();
+// ===== 初期化 =====
+(async function(){
+  try{
+    await initData();
+    initDate();
+    renderShopSettings();
+    updateShopDropdown();
+    refresh();
+  }catch(e){
+    console.error('初期化エラー:',e);
+    toast('データ読み込みに失敗しました');
+  }
+})();
 </script>
 </body>
 </html>

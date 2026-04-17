@@ -5,7 +5,7 @@ const CACHE_NAME = 'slot-tracker-v1';
 // オフラインでも読み込みたいファイル一覧
 const CACHE_URLS = [
   './',
-  './slot-tracker.html',
+  './index.html',
   './manifest.json',
   './icon-120.png',
   './icon-152.png',
@@ -50,7 +50,7 @@ self.addEventListener('fetch', (event) => {
         return response;
       }).catch(() => {
         if (event.request.headers.get('accept')?.includes('text/html')) {
-          return caches.match('./slot-tracker.html');
+          return caches.match('./index.html');
         }
       });
     })
