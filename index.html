@@ -892,9 +892,10 @@ function rSlump(){
     }
   }
 
-  var pts=[startCum],labels=['開始'];
+  var pts=[startCum],labels=[''];
   var c=startCum;
-  for(var i=0;i<f.length;i++){c+=f[i].pl;pts.push(c);labels.push(fd(f[i].date));}
+  function md(s){var p=s.split('-');return parseInt(p[1])+'/'+parseInt(p[2]);}
+  for(var i=0;i<f.length;i++){c+=f[i].pl;pts.push(c);labels.push(md(f[i].date));}
 
   // 画面幅にフィットさせる（横スクロールしない）
   var W=Math.max(300,(box.clientWidth||document.body.clientWidth-64)),H=220,pad={t:20,r:20,b:40,l:60};
@@ -926,12 +927,19 @@ function rSlump(){
     yLabels+='<line x1="'+pad.l+'" y1="'+y+'" x2="'+(W-pad.r)+'" y2="'+y+'" stroke="rgba(128,136,150,0.25)" stroke-width="1"/>';
   }
 
-  var xLabels='',step=Math.max(1,Math.floor(pts.length/6));
-  for(var i=0;i<pts.length;i+=step){
-    xLabels+='<text x="'+gx(i)+'" y="'+(H-pad.b+16)+'" text-anchor="middle" fill="#94a3b8" font-size="9">'+labels[i]+'</text>';
+  // ラベルは最大5個・最低36px間隔・同じ日付は繰り返さない
+  var xLabels='',maxLabels=Math.max(3,Math.min(5,Math.floor(gw/64)));
+  var step=Math.max(1,Math.ceil((pts.length-1)/maxLabels));
+  var lastX=-1e9,lastTxt='';
+  for(var i=1;i<pts.length;i+=step){
+    var x=gx(i);
+    if(x-lastX<36||labels[i]===lastTxt)continue;
+    xLabels+='<text x="'+x+'" y="'+(H-pad.b+16)+'" text-anchor="middle" fill="#94a3b8" font-size="9">'+labels[i]+'</text>';
+    lastX=x;lastTxt=labels[i];
   }
-  if((pts.length-1)%step!==0){
-    xLabels+='<text x="'+gx(pts.length-1)+'" y="'+(H-pad.b+16)+'" text-anchor="middle" fill="#94a3b8" font-size="9">'+labels[pts.length-1]+'</text>';
+  var endX=gx(pts.length-1);
+  if(endX-lastX>=36&&labels[pts.length-1]!==lastTxt){
+    xLabels+='<text x="'+endX+'" y="'+(H-pad.b+16)+'" text-anchor="middle" fill="#94a3b8" font-size="9">'+labels[pts.length-1]+'</text>';
   }
 
   var svg='<svg width="'+W+'" height="'+H+'" viewBox="0 0 '+W+' '+H+'" xmlns="http://www.w3.org/2000/svg">';
