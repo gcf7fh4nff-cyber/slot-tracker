@@ -1,6 +1,6 @@
 // スロット収支管理 Service Worker v2
 // index.html はネット優先（更新が即反映）、オフライン時はキャッシュで動く
-var CACHE = 'slot-tracker-v2';
+var CACHE = 'slot-tracker-v3';
 var ASSETS = ['./', './index.html', './manifest.json'];
 
 self.addEventListener('install', function(e) {
