@@ -147,7 +147,36 @@ svg text{font-family:-apple-system,BlinkMacSystemFont,'Hiragino Sans',sans-serif
         <div class="fg"><label id="lRet">回収額（円）</label><input type="number" id="iRet" placeholder="0" inputmode="numeric" oninput="updateConvertInfo()"></div>
       </div>
       <div id="convertInfo" style="font-size:12px;color:#2563eb;margin:-8px 0 12px;display:none"></div>
-      <div class="fg"><label>メモ（任意）</label><input type="text" id="iMemo" placeholder="例：設定6確定、AT3回"></div>
+      <div class="fg"><label>メモ（任意）</label><input type="text" id="iMemo" placeholder="例：AT3回、朝イチ軽かった"></div>
+      <div style="margin-bottom:12px">
+        <button type="button" onclick="toggleDtl()" style="background:none;border:none;color:#2563eb;font-size:13px;font-weight:600;cursor:pointer;padding:4px 0">▸ 詳細記録（任意・分析用） <span id="dtlArrow"></span></button>
+        <div id="dtlBox" style="display:none;border-top:1px dashed #e2e8f0;padding-top:12px;margin-top:4px">
+          <div class="fr">
+            <div class="fg"><label>台番（任意）</label><input type="text" id="iDai" placeholder="例：831" inputmode="numeric"></div>
+            <div class="fg"><label>回したG数（任意）</label><input type="number" id="iG" placeholder="例：5000" inputmode="numeric" oninput="updateEvInfo()"></div>
+          </div>
+          <div class="fg"><label>想定機械割％（任意）</label><input type="number" id="iRate" placeholder="例：105.5" step="0.1" inputmode="decimal" oninput="updateEvInfo()"></div>
+          <div id="evInfo" style="font-size:12px;color:#2563eb;margin:-6px 0 10px;display:none"></div>
+          <div class="fg"><label>台を選んだ根拠（任意・1タップ）</label>
+            <div class="ps" id="basisChips" style="margin-bottom:0">
+              <button type="button" class="pb" onclick="pickBasis(this)">SNS示唆</button>
+              <button type="button" class="pb" onclick="pickBasis(this)">ポエム</button>
+              <button type="button" class="pb" onclick="pickBasis(this)">データ予測</button>
+              <button type="button" class="pb" onclick="pickBasis(this)">肌感</button>
+              <button type="button" class="pb" onclick="pickBasis(this)">ハイエナ</button>
+              <button type="button" class="pb" onclick="pickBasis(this)">その他</button>
+            </div>
+          </div>
+          <div class="fg"><label>設定示唆・確定（任意・1タップ）</label>
+            <div class="ps" id="kakuChips" style="margin-bottom:0">
+              <button type="button" class="pb" onclick="pickKaku(this)">示唆弱</button>
+              <button type="button" class="pb" onclick="pickKaku(this)">示唆強</button>
+              <button type="button" class="pb" onclick="pickKaku(this)">456確</button>
+              <button type="button" class="pb" onclick="pickKaku(this)">6確</button>
+            </div>
+          </div>
+        </div>
+      </div>
       <button class="btn btn-p" onclick="addRec()">記録する</button>
     </div>
     <div class="cd"><div class="ct-t">最近の記録</div><div id="rcList"></div></div>
@@ -171,6 +200,8 @@ svg text{font-family:-apple-system,BlinkMacSystemFont,'Hiragino Sans',sans-serif
 
   <div class="tc" id="t-stats">
     <div class="cd"><div class="ct-t">月別集計</div><div id="mStats"></div></div>
+    <div class="cd"><div class="ct-t">根拠別集計（どの情報源が儲かるか）</div><div id="bStats"></div></div>
+    <div class="cd"><div class="ct-t">期待値の答え合わせ（想定 vs 実績）</div><div id="evStats"></div></div>
     <div class="cd"><div class="ct-t">機種別集計</div><div id="kStats"></div></div>
   </div>
 
@@ -197,7 +228,7 @@ svg text{font-family:-apple-system,BlinkMacSystemFont,'Hiragino Sans',sans-serif
   <div class="tc" id="t-settings">
     <div class="cd">
       <div class="ct-t">貯メダル設定（店舗別）</div>
-      <p style="font-size:13px;color:#64748b;margin-bottom:12px">店舗ごとの貯メダル初期枚数を設定します。記録時に「枚数で入力」した分が自動で増減します。</p>
+      <p style="font-size:13px;color:#64748b;margin-bottom:12px">店舗ごとの持ちメダルを管理します。記録時に「枚数で入力」した分は自動で増減。店で下ろした時などは、右の欄に今の枚数をそのまま打てば修正できます。</p>
       <div id="medalShopSettings"></div>
       <div style="display:flex;gap:8px;margin-top:8px">
         <input type="text" id="newShopName" placeholder="店舗名を入力" style="flex:1;padding:8px 12px;border:2px solid #e2e8f0;border-radius:8px;font-size:14px">
@@ -248,6 +279,15 @@ svg text{font-family:-apple-system,BlinkMacSystemFont,'Hiragino Sans',sans-serif
       <div class="fg"><label>回収（枚数）</label><input type="number" id="eMRet" inputmode="numeric" placeholder="なし"></div>
     </div>
     <div class="fg"><label>メモ</label><input type="text" id="eMemo"></div>
+    <div class="fr">
+      <div class="fg"><label>台番</label><input type="text" id="eDai" placeholder="なし"></div>
+      <div class="fg"><label>回したG数</label><input type="number" id="eG" placeholder="なし"></div>
+    </div>
+    <div class="fr">
+      <div class="fg"><label>想定機械割％</label><input type="number" id="eRate" step="0.1" placeholder="なし"></div>
+      <div class="fg"><label>根拠</label><select id="eBasis"><option value="">なし</option><option>SNS示唆</option><option>ポエム</option><option>データ予測</option><option>肌感</option><option>ハイエナ</option><option>その他</option></select></div>
+    </div>
+    <div class="fg"><label>設定示唆・確定</label><select id="eKaku"><option value="">なし</option><option>示唆弱</option><option>示唆強</option><option>456確</option><option>6確</option></select></div>
     <div class="ma">
       <button class="btn btn-o" onclick="document.getElementById('edMo').classList.remove('sh')">キャンセル</button>
       <button class="btn btn-p" onclick="saveEd()">保存</button>
@@ -392,10 +432,16 @@ async function addShopMedal(){
   renderShopSettings();updateShopDropdown();rSummary();
   toast(n+'を追加しました');
 }
-async function updateShopInit(shop,el){
-  var v=parseInt(el.value)||0;
-  var sm=getShopMedals();sm[shop]=v;
-  await saveShopMedals(sm);rSummary();
+// 現在の持ちメダル枚数を直打ちで修正する（内部の初期値を逆算して合わせる）
+async function updateShopBalance(shop,el){
+  var target=parseInt(el.value)||0;
+  var sm=getShopMedals();
+  var init=sm[shop]||0;
+  var delta=calcShopMedalBalance(shop)-init; // 記録由来の増減
+  sm[shop]=target-delta; // 入力した枚数がそのまま現在値になるよう初期値を調整
+  await saveShopMedals(sm);
+  renderShopSettings();rSummary();
+  toast(shop+'の持ちメダルを'+target.toLocaleString()+'枚に修正しました');
 }
 async function removeShop(shop){
   if(!confirm(shop+'の貯メダル設定を削除しますか？'))return;
@@ -404,7 +450,7 @@ async function removeShop(shop){
   renderShopSettings();updateShopDropdown();rSummary();
   toast(shop+'を削除しました');
 }
-function renderShopSettings(){var el=document.getElementById('medalShopSettings');var sm=getShopMedals();var keys=Object.keys(sm).sort();if(keys.length===0){el.innerHTML='<p style="font-size:13px;color:#94a3b8;text-align:center;padding:8px 0">店舗を追加してください</p>';return;}var h='';for(var i=0;i<keys.length;i++){var k=keys[i],bal=calcShopMedalBalance(k);h+='<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;padding:10px;background:#f8fafc;border-radius:8px">';h+='<div style="flex:1;min-width:0"><div style="font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+esc(k)+'</div>';h+='<div style="font-size:11px;color:#64748b">現在: <b style="color:#f59e0b">'+bal.toLocaleString()+'枚</b></div></div>';h+='<div style="width:80px"><input type="number" value="'+sm[k]+'" inputmode="numeric" style="width:100%;padding:6px;border:1.5px solid #e2e8f0;border-radius:6px;font-size:13px;text-align:right" onchange="updateShopInit(\''+esc(k).replace(/'/g,"\\'")+'\',this)"></div>';h+='<button class="bi del" onclick="removeShop(\''+esc(k).replace(/'/g,"\\'")+'\')">🗑</button></div>';}el.innerHTML=h;}
+function renderShopSettings(){var el=document.getElementById('medalShopSettings');var sm=getShopMedals();var keys=Object.keys(sm).sort();if(keys.length===0){el.innerHTML='<p style="font-size:13px;color:#94a3b8;text-align:center;padding:8px 0">店舗を追加してください</p>';return;}var h='';for(var i=0;i<keys.length;i++){var k=keys[i],bal=calcShopMedalBalance(k);h+='<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;padding:10px;background:#f8fafc;border-radius:8px">';h+='<div style="flex:1;min-width:0"><div style="font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+esc(k)+'</div>';h+='<div style="font-size:11px;color:#64748b">持ちメダル <b style="color:#f59e0b">'+bal.toLocaleString()+'枚</b>（下ろした時はそのまま枚数を書き換え）</div></div>';h+='<div style="width:90px"><input type="number" value="'+bal+'" inputmode="numeric" style="width:100%;padding:6px;border:1.5px solid #e2e8f0;border-radius:6px;font-size:13px;text-align:right" onchange="updateShopBalance(\''+esc(k).replace(/'/g,"\\'")+'\',this)"><div style="font-size:9px;color:#94a3b8;text-align:center">現在枚数を直接修正</div></div>';h+='<button class="bi del" onclick="removeShop(\''+esc(k).replace(/'/g,"\\'")+'\')">🗑</button></div>';}el.innerHTML=h;}
 function gid(){return Date.now().toString(36)+Math.random().toString(36).substr(2,5);}
 function esc(s){var d=document.createElement('div');d.textContent=s;return d.innerHTML;}
 function fm(n){if(n===0)return '0';return (n>0?'+':'')+n.toLocaleString();}
@@ -455,7 +501,7 @@ function switchTab(name){
   tabs[idx].classList.add('on');
   contents[idx].classList.add('on');
   if(name==='history')rHist();
-  if(name==='stats'){rMonth();rMc();}
+  if(name==='stats'){rMonth();rBasis();rEv();rMc();}
   if(name==='graph'){rSlump();rBar();}
   if(name==='settings')renderShopSettings();
 }
@@ -476,6 +522,15 @@ async function addRec(){
   var pl=ret-inv;
   var rec={id:gid(),date:date,shop:shop,machine:mc,invest:inv,ret:ret,pl:pl,memo:memo,ct:Date.now()};
   if(mInv!==null){rec.mInv=mInv;rec.mRet=mRet;}
+  // 詳細記録（任意）
+  var dai=document.getElementById('iDai').value.trim();
+  var g=parseInt(document.getElementById('iG').value)||0;
+  var rate=parseFloat(document.getElementById('iRate').value)||0;
+  if(dai)rec.dai=dai;
+  if(g>0)rec.g=g;
+  if(rate>0)rec.rate=rate;
+  if(curBasis)rec.basis=curBasis;
+  if(curKaku)rec.kaku=curKaku;
   // 枚数モードで新規店舗なら貯メダル設定にも自動登録
   if(shop&&mInv!==null){
     var sm=getShopMedals();
@@ -487,6 +542,11 @@ async function addRec(){
   document.getElementById('iInv').value='';
   document.getElementById('iRet').value='';
   document.getElementById('iMemo').value='';
+  document.getElementById('iDai').value='';
+  document.getElementById('iG').value='';
+  document.getElementById('iRate').value='';
+  clearChips();
+  document.getElementById('evInfo').style.display='none';
   document.getElementById('convertInfo').style.display='none';
   initDate();
   toast('記録しました（'+fm(pl)+'円）');
@@ -605,6 +665,7 @@ function rRecent(){
     h+='<div class="hi"><div class="hl"><div class="hd2">'+fd(r.date)+(r.shop?' @ '+esc(r.shop):'')+'</div><div class="hm">'+esc(r.machine)+'</div>';
     var dtl='投資 '+r.invest.toLocaleString()+' / 回収 '+r.ret.toLocaleString();
     if(r.mInv!=null)dtl+=' ('+r.mInv.toLocaleString()+'枚→'+r.mRet.toLocaleString()+'枚)';
+    dtl+=dtlTags(r);
     if(r.memo)dtl+=' / '+esc(r.memo);
     h+='<div class="hdt">'+dtl+'</div></div>';
     h+='<div class="hr"><div class="hp '+gc(r.pl)+'">'+fm(r.pl)+'</div><div class="hc">累計 '+fm(cm[r.id])+'</div></div></div>';
@@ -647,6 +708,7 @@ function rHist(){
     h+='<div class="hi"><div class="hl"><div class="hd2">'+fd(r.date)+(r.shop?' @ '+esc(r.shop):'')+'</div><div class="hm">'+esc(r.machine)+'</div>';
     var dtl2='投資 '+r.invest.toLocaleString()+' / 回収 '+r.ret.toLocaleString();
     if(r.mInv!=null)dtl2+=' ('+r.mInv.toLocaleString()+'枚→'+r.mRet.toLocaleString()+'枚)';
+    dtl2+=dtlTags(r);
     if(r.memo)dtl2+=' / '+esc(r.memo);
     h+='<div class="hdt">'+dtl2+'</div></div>';
     h+='<div class="hr"><div class="hp '+gc(r.pl)+'">'+fm(r.pl)+'</div><div class="hc">累計 '+fm(cm[r.id])+'</div>';
@@ -668,6 +730,11 @@ function openEd(id){
   document.getElementById('eMInv').value=r.mInv!=null?r.mInv:'';
   document.getElementById('eMRet').value=r.mRet!=null?r.mRet:'';
   document.getElementById('eMemo').value=r.memo||'';
+  document.getElementById('eDai').value=r.dai||'';
+  document.getElementById('eG').value=r.g!=null?r.g:'';
+  document.getElementById('eRate').value=r.rate!=null?r.rate:'';
+  document.getElementById('eBasis').value=r.basis||'';
+  document.getElementById('eKaku').value=r.kaku||'';
   document.getElementById('edMo').classList.add('sh');
 }
 async function saveEd(){
@@ -685,6 +752,16 @@ async function saveEd(){
       if(emInv!==''){R[i].mInv=parseInt(emInv)||0;R[i].mRet=parseInt(emRet)||0;}
       else{delete R[i].mInv;delete R[i].mRet;}
       R[i].memo=document.getElementById('eMemo').value.trim();
+      var ed=document.getElementById('eDai').value.trim();
+      var eg=parseInt(document.getElementById('eG').value)||0;
+      var er=parseFloat(document.getElementById('eRate').value)||0;
+      var eb=document.getElementById('eBasis').value;
+      var ek=document.getElementById('eKaku').value;
+      if(ed)R[i].dai=ed;else delete R[i].dai;
+      if(eg>0)R[i].g=eg;else delete R[i].g;
+      if(er>0)R[i].rate=er;else delete R[i].rate;
+      if(eb)R[i].basis=eb;else delete R[i].basis;
+      if(ek)R[i].kaku=ek;else delete R[i].kaku;
       updatedRec=R[i];
       break;
     }
@@ -766,7 +843,8 @@ function rSlump(){
   var c=startCum;
   for(var i=0;i<f.length;i++){c+=f[i].pl;pts.push(c);labels.push(fd(f[i].date));}
 
-  var W=Math.max(320,pts.length*40),H=220,pad={t:20,r:20,b:40,l:60};
+  // 画面幅にフィットさせる（横スクロールしない）
+  var W=Math.max(300,(box.clientWidth||document.body.clientWidth-64)),H=220,pad={t:20,r:20,b:40,l:60};
   var gw=W-pad.l-pad.r,gh=H-pad.t-pad.b;
   var mn=Math.min.apply(null,pts),mx=Math.max.apply(null,pts);
   if(mn===mx){mn-=1000;mx+=1000;}
@@ -838,7 +916,10 @@ function rBar(){
   if(keys.length===0){box.innerHTML='';return;}
 
   var vals=[];for(var i=0;i<keys.length;i++)vals.push(ms[keys[i]]);
-  var bw=36,gap=8,W=Math.max(320,keys.length*(bw+gap)+80),H=200,pad={t:20,r:20,b:40,l:60};
+  var cw=Math.max(300,(box.clientWidth||document.body.clientWidth-64));
+  var W=cw,H=200,pad={t:20,r:20,b:40,l:60};
+  var bw=Math.min(36,Math.max(10,Math.floor((W-pad.l-pad.r)/keys.length)-8)),gap=8;
+  if(keys.length*(bw+gap)+pad.l+pad.r>W)W=keys.length*(bw+gap)+80;
   var gw=W-pad.l-pad.r,gh=H-pad.t-pad.b;
   var mn=Math.min.apply(null,vals),mx=Math.max.apply(null,vals);
   if(mn>0)mn=0;if(mx<0)mx=0;
@@ -918,6 +999,89 @@ async function clearAll(){
   refresh();renderShopSettings();updateShopDropdown();
 }
 
+// ===== 詳細記録（v2追加） =====
+var curBasis='',curKaku='';
+function toggleDtl(){
+  var b=document.getElementById('dtlBox');
+  b.style.display=(b.style.display==='none')?'block':'none';
+}
+function pickBasis(btn){
+  var bs=document.getElementById('basisChips').querySelectorAll('.pb');
+  var was=btn.classList.contains('on');
+  for(var i=0;i<bs.length;i++)bs[i].classList.remove('on');
+  if(!was){btn.classList.add('on');curBasis=btn.textContent;}else{curBasis='';}
+}
+function pickKaku(btn){
+  var bs=document.getElementById('kakuChips').querySelectorAll('.pb');
+  var was=btn.classList.contains('on');
+  for(var i=0;i<bs.length;i++)bs[i].classList.remove('on');
+  if(!was){btn.classList.add('on');curKaku=btn.textContent;}else{curKaku='';}
+}
+function clearChips(){
+  curBasis='';curKaku='';
+  var a=document.getElementById('basisChips').querySelectorAll('.pb');
+  for(var i=0;i<a.length;i++)a[i].classList.remove('on');
+  var b=document.getElementById('kakuChips').querySelectorAll('.pb');
+  for(var i=0;i<b.length;i++)b[i].classList.remove('on');
+}
+// 想定期待値: G数×3枚×(機械割-100%)
+function calcEv(g,rate){return Math.round(g*3*(rate/100-1));}
+function updateEvInfo(){
+  var g=parseInt(document.getElementById('iG').value)||0;
+  var rate=parseFloat(document.getElementById('iRate').value)||0;
+  var el=document.getElementById('evInfo');
+  if(g>0&&rate>0){
+    var ev=calcEv(g,rate);
+    el.textContent='想定期待値: '+(ev>=0?'+':'')+ev.toLocaleString()+'枚（約'+(ev>=0?'+':'')+(ev*MEDAL_RATE).toLocaleString()+'円）';
+    el.style.display='block';
+  }else{el.style.display='none';}
+}
+function dtlTags(r){
+  var t='';
+  if(r.dai)t+=' / #'+esc(r.dai);
+  if(r.g)t+=' / '+r.g.toLocaleString()+'G';
+  if(r.basis)t+=' / '+esc(r.basis);
+  if(r.kaku)t+=' / '+esc(r.kaku);
+  return t;
+}
+// --- 根拠別集計 ---
+function rBasis(){
+  var el=document.getElementById('bStats');
+  var ms={},cnt=0;
+  for(var i=0;i<R.length;i++){
+    var b=R[i].basis;if(!b)continue;cnt++;
+    if(!ms[b])ms[b]={pl:0,cnt:0,w:0};
+    ms[b].pl+=R[i].pl;ms[b].cnt++;if(R[i].pl>0)ms[b].w++;
+  }
+  if(cnt===0){el.innerHTML='<div class="em"><p>根拠タグ付きの記録がまだありません<br><span style="font-size:12px">記録時に「詳細記録」から根拠を選ぶと、どの情報源が儲かるか集計されます</span></p></div>';return;}
+  var arr=[];for(var k in ms)arr.push([k,ms[k]]);
+  arr.sort(function(a,b){return b[1].pl-a[1].pl;});
+  var h='<table class="st"><thead><tr><th>根拠</th><th>回数</th><th>収支</th><th>勝率</th></tr></thead><tbody>';
+  for(var i=0;i<arr.length;i++){
+    var n=arr[i][0],d=arr[i][1],wr=Math.round(d.w/d.cnt*100);
+    h+='<tr><td class="ml">'+esc(n)+'</td><td>'+d.cnt+'</td>';
+    h+='<td class="'+gc(d.pl)+'" style="font-weight:600">'+fm(d.pl)+'</td>';
+    h+='<td>'+wr+'%<div class="wr"><div class="wf" style="width:'+wr+'%"></div></div></td></tr>';
+  }
+  h+='</tbody></table>';el.innerHTML=h;
+}
+// --- 期待値検証 ---
+function rEv(){
+  var el=document.getElementById('evStats');
+  var evSum=0,plSum=0,cnt=0;
+  for(var i=0;i<R.length;i++){
+    var r=R[i];
+    if(r.g&&r.rate){evSum+=calcEv(r.g,r.rate)*MEDAL_RATE;plSum+=r.pl;cnt++;}
+  }
+  if(cnt===0){el.innerHTML='<div class="em"><p>G数と想定機械割の入った記録がまだありません<br><span style="font-size:12px">両方入れると「読み通りの期待値が出ているか」を答え合わせできます</span></p></div>';return;}
+  var h='<table class="st"><thead><tr><th></th><th>金額</th></tr></thead><tbody>';
+  h+='<tr><td class="ml">想定期待値の合計</td><td class="'+gc(evSum)+'" style="font-weight:600">'+fm(evSum)+'</td></tr>';
+  h+='<tr><td class="ml">実際の収支合計</td><td class="'+gc(plSum)+'" style="font-weight:600">'+fm(plSum)+'</td></tr>';
+  h+='<tr><td class="ml">差（実績-想定）</td><td class="'+gc(plSum-evSum)+'">'+fm(plSum-evSum)+'</td></tr>';
+  h+='</tbody></table>';
+  h+='<p style="font-size:11px;color:#94a3b8;margin-top:8px">対象 '+cnt+'件。件数が増えるほど、想定機械割の見立てが正しいかが分かります（実績はブレるので30件以上で判断推奨）</p>';
+  el.innerHTML=h;
+}
 function refresh(){rSummary();rRecent();}
 
 // ===== Service Worker登録 (PWAオフライン対応) =====
