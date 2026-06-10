@@ -17,90 +17,99 @@
 <title>スロット収支管理</title>
 <style>
 *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
-body{font-family:-apple-system,BlinkMacSystemFont,'Hiragino Sans',sans-serif;background:#0b1020;color:#e8ecff;line-height:1.5;padding-bottom:90px;-webkit-text-size-adjust:100%;background-image:radial-gradient(900px 500px at 50% -120px,#1d1454 0%,rgba(11,16,32,0) 60%)}
-.hd{background:linear-gradient(120deg,#6d28d9 0%,#db2777 75%,#f59e0b 140%);color:#fff;padding:16px 20px;position:sticky;top:0;z-index:100;box-shadow:0 2px 24px rgba(124,58,237,.5)}
-.hd h1{font-size:18px;font-weight:800;letter-spacing:.5px}
-.hd .sub{font-size:12px;opacity:.9;margin-top:2px}
-.sb{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;padding:12px 16px;background:rgba(19,25,46,.97);border-bottom:1px solid #232c4d}
+body{
+--bg:#0e0f13;--bg2:#15161b;--card:#1a1c22;--sub:#22242b;--line:#2e3138;--txt:#e8eaee;--mut:#9aa0ab;
+--acc:#5b9bff;--acc-bg:rgba(91,155,255,.1);--plus:#f87171;--minus:#60a5fa;
+--hd-bg:#15161b;--hd-txt:#fff;--hd-line:#2e3138;--btn:#2f6fed;--shadow:rgba(0,0,0,.4);
+font-family:-apple-system,BlinkMacSystemFont,'Hiragino Sans',sans-serif;background:var(--bg);color:var(--txt);line-height:1.5;padding-bottom:90px;-webkit-text-size-adjust:100%}
+body[data-theme="light"]{
+--bg:#f1f5f9;--bg2:#fff;--card:#fff;--sub:#f1f5f9;--line:#e2e8f0;--txt:#1e293b;--mut:#64748b;
+--acc:#2563eb;--acc-bg:rgba(37,99,235,.06);--plus:#dc2626;--minus:#2563eb;
+--hd-bg:linear-gradient(135deg,#2563eb,#1d4ed8);--hd-txt:#fff;--hd-line:transparent;--btn:#2563eb;--shadow:rgba(0,0,0,.08)}
+.hd{background:var(--hd-bg);color:var(--hd-txt);padding:16px 20px;position:sticky;top:0;z-index:100;border-bottom:1px solid var(--hd-line);box-shadow:0 2px 12px var(--shadow)}
+.hd h1{font-size:18px;font-weight:700}
+.hd .sub{font-size:12px;opacity:.85;margin-top:2px}
+.sb{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;padding:12px 16px;background:var(--bg2);border-bottom:1px solid var(--line)}
 .si{text-align:center}
-.si .l{font-size:10px;color:#9aa5c4;letter-spacing:1px}
+.si .l{font-size:10px;color:var(--mut);letter-spacing:1px}
 .si .v{font-size:17px;font-weight:800}
-.plus{color:#fb7185}
-.minus{color:#38bdf8}
+.plus{color:var(--plus)}
+.minus{color:var(--minus)}
 .zero{color:#94a3b8}
 .ct{padding:12px 16px;max-width:500px;margin:0 auto}
-.cd{background:linear-gradient(180deg,#171e38,#121830);border:1px solid #232c4d;border-radius:16px;box-shadow:0 6px 24px rgba(0,0,0,.4);padding:16px;margin-bottom:12px}
-.ct-t{font-size:14px;font-weight:800;margin-bottom:12px;background:linear-gradient(90deg,#c4b5fd,#f9a8d4);-webkit-background-clip:text;background-clip:text;color:transparent;letter-spacing:.3px}
+.cd{background:var(--card);border:1px solid var(--line);border-radius:14px;box-shadow:0 2px 10px var(--shadow);padding:16px;margin-bottom:12px}
+.ct-t{font-size:14px;font-weight:700;margin-bottom:12px;color:var(--txt)}
+.ct-t::before{content:'';display:inline-block;width:3px;height:12px;background:var(--acc);border-radius:2px;margin-right:7px;vertical-align:-1px}
 .fg{margin-bottom:12px}
-.fg label{display:block;font-size:12px;font-weight:600;color:#9aa5c4;margin-bottom:4px}
-.fg input,.fg select{width:100%;padding:10px 12px;border:2px solid #2a3354;border-radius:10px;font-size:16px;background:#0f152a;-webkit-appearance:none;appearance:none;color:#e8ecff;transition:border-color .2s,box-shadow .2s}
-.fg input:focus{outline:none;border-color:#a78bfa;box-shadow:0 0 0 3px rgba(167,139,250,.15)}
-.fg input::placeholder{color:#525e85}
+.fg label{display:block;font-size:12px;font-weight:600;color:var(--mut);margin-bottom:4px}
+.fg input,.fg select{width:100%;padding:10px 12px;border:2px solid var(--line);border-radius:9px;font-size:16px;background:var(--bg2);-webkit-appearance:none;appearance:none;color:var(--txt);transition:border-color .2s}
+.fg input:focus{outline:none;border-color:var(--acc)}
+.fg input::placeholder{color:var(--mut);opacity:.5}
 .fr{display:grid;grid-template-columns:1fr 1fr;gap:10px}
-.btn{display:block;width:100%;padding:12px;border:none;border-radius:10px;font-size:16px;font-weight:700;cursor:pointer;text-align:center}
-.btn-p{background:linear-gradient(135deg,#7c3aed,#db2777);color:#fff;box-shadow:0 4px 16px rgba(124,58,237,.45)}
+.btn{display:block;width:100%;padding:12px;border:none;border-radius:9px;font-size:16px;font-weight:700;cursor:pointer;text-align:center}
+.btn-p{background:var(--btn);color:#fff}
 .btn-p:active{filter:brightness(.85)}
-.btn-o{background:transparent;border:1.5px solid #2a3354;color:#e8ecff}
+.btn-o{background:transparent;border:1.5px solid var(--line);color:var(--txt)}
 .btn-d{background:#dc2626;color:#fff}
-.btn-s{padding:8px 14px;font-size:13px;width:auto;border-radius:8px}
-.tn{display:flex;gap:0;background:#151b2e;border:1px solid #232c4d;border-radius:14px;overflow:hidden;box-shadow:0 4px 16px rgba(0,0,0,.35);margin-bottom:12px}
-.tb{flex:1;padding:10px 2px;border:none;background:transparent;font-size:12px;font-weight:600;color:#9aa5c4;cursor:pointer;border-bottom:2px solid transparent}
-.tb.on{color:#f9a8d4;border-bottom-color:#ec4899;background:rgba(236,72,153,.08)}
+.btn-s{padding:8px 14px;font-size:13px;width:auto;border-radius:7px}
+.tn{display:flex;gap:0;background:var(--card);border:1px solid var(--line);border-radius:12px;overflow:hidden;box-shadow:0 2px 10px var(--shadow);margin-bottom:12px}
+.tb{flex:1;padding:10px 2px;border:none;background:transparent;font-size:12px;font-weight:600;color:var(--mut);cursor:pointer;border-bottom:2px solid transparent}
+.tb.on{color:var(--acc);border-bottom-color:var(--acc);background:var(--acc-bg)}
 .tc{display:none}
 .tc.on{display:block}
-.hi{display:flex;justify-content:space-between;align-items:flex-start;padding:10px 0;border-bottom:1px solid #232c4d}
+.hi{display:flex;justify-content:space-between;align-items:flex-start;padding:10px 0;border-bottom:1px solid var(--line)}
 .hi:last-child{border-bottom:none}
 .hl{flex:1;min-width:0}
-.hd2{font-size:12px;color:#9aa5c4}
+.hd2{font-size:12px;color:var(--mut)}
 .hm{font-size:14px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.hdt{font-size:11px;color:#9aa5c4;margin-top:2px}
+.hdt{font-size:11px;color:var(--mut);margin-top:2px}
 .hr{text-align:right;min-width:80px;flex-shrink:0}
 .hp{font-size:16px;font-weight:700}
-.hc{font-size:11px;color:#9aa5c4}
+.hc{font-size:11px;color:var(--mut)}
 .ha{display:flex;gap:6px;margin-top:4px;justify-content:flex-end}
-.bi{width:28px;height:28px;border:none;border-radius:8px;cursor:pointer;font-size:13px;display:flex;align-items:center;justify-content:center}
-.bi.del{background:rgba(220,38,38,.18);color:#fb7185}
-.bi.edt{background:rgba(56,189,248,.15);color:#38bdf8}
+.bi{width:28px;height:28px;border:none;border-radius:7px;cursor:pointer;font-size:13px;display:flex;align-items:center;justify-content:center}
+.bi.del{background:rgba(220,38,38,.14);color:var(--plus)}
+.bi.edt{background:rgba(59,130,246,.14);color:var(--minus)}
 .st{width:100%;border-collapse:collapse;font-size:13px}
-.st th{background:#1b2340;padding:8px 6px;text-align:center;font-weight:600;font-size:11px;color:#9aa5c4}
-.st td{padding:8px 6px;text-align:center;border-bottom:1px solid #232c4d}
+.st th{background:var(--sub);padding:8px 6px;text-align:center;font-weight:600;font-size:11px;color:var(--mut)}
+.st td{padding:8px 6px;text-align:center;border-bottom:1px solid var(--line)}
 .st .ml{text-align:left;font-weight:600}
 .ps{display:flex;gap:6px;margin-bottom:12px;overflow-x:auto;padding-bottom:4px;-webkit-overflow-scrolling:touch}
-.pb{padding:6px 12px;border:1.5px solid #2a3354;border-radius:20px;font-size:12px;font-weight:600;background:#0f152a;color:#9aa5c4;cursor:pointer;white-space:nowrap}
-.pb.on{background:linear-gradient(135deg,#7c3aed,#db2777);color:#fff;border-color:transparent;box-shadow:0 0 12px rgba(236,72,153,.5)}
-.wr{height:6px;background:#232c4d;border-radius:3px;overflow:hidden;margin-top:4px}
-.wf{height:100%;background:linear-gradient(90deg,#34d399,#a3e635);border-radius:3px}
-.sg{position:relative;background:#151b2e;border:1px solid #2a3354;border-radius:10px;box-shadow:0 6px 20px rgba(0,0,0,.5);z-index:50;max-height:150px;overflow-y:auto;display:none;margin-top:-8px;margin-bottom:8px}
+.pb{padding:6px 12px;border:1.5px solid var(--line);border-radius:20px;font-size:12px;font-weight:600;background:var(--bg2);color:var(--mut);cursor:pointer;white-space:nowrap}
+.pb.on{background:var(--btn);color:#fff;border-color:var(--btn)}
+.wr{height:6px;background:var(--sub);border-radius:3px;overflow:hidden;margin-top:4px}
+.wf{height:100%;background:#16a34a;border-radius:3px}
+.sg{position:relative;background:var(--card);border:1px solid var(--line);border-radius:9px;box-shadow:0 4px 14px var(--shadow);z-index:50;max-height:150px;overflow-y:auto;display:none;margin-top:-8px;margin-bottom:8px}
 .sg.sh{display:block}
-.sg-i{padding:10px 12px;font-size:14px;cursor:pointer;border-bottom:1px solid #232c4d}
+.sg-i{padding:10px 12px;font-size:14px;cursor:pointer;border-bottom:1px solid var(--line)}
 .sg-i:last-child{border-bottom:none}
-.sg-i:active{background:#1b2340}
-.em{text-align:center;padding:30px 20px;color:#9aa5c4}
+.sg-i:active{background:var(--sub)}
+.em{text-align:center;padding:30px 20px;color:var(--mut)}
 .em .ic{font-size:40px;margin-bottom:8px}
 .em p{font-size:14px}
 .bb{display:flex;gap:8px;flex-wrap:wrap}
 .bb .btn{flex:1;min-width:120px}
-.toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%) translateY(100px);background:linear-gradient(135deg,#7c3aed,#db2777);color:#fff;padding:12px 24px;border-radius:12px;font-size:14px;z-index:1000;transition:transform .3s ease;box-shadow:0 6px 24px rgba(124,58,237,.5);white-space:nowrap}
+.toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%) translateY(100px);background:#0009;backdrop-filter:blur(8px);color:#fff;padding:12px 24px;border-radius:10px;font-size:14px;z-index:1000;transition:transform .3s ease;box-shadow:0 4px 16px rgba(0,0,0,.3);white-space:nowrap}
 .toast.sh{transform:translateX(-50%) translateY(0)}
-.mo{display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:200;align-items:flex-end;justify-content:center}
+.mo{display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:200;align-items:flex-end;justify-content:center}
 .mo.sh{display:flex}
-.md{background:#151b2e;border:1px solid #2a3354;border-radius:16px 16px 0 0;width:100%;max-width:500px;max-height:80vh;overflow-y:auto;padding:20px}
+.md{background:var(--card);border-top:1px solid var(--line);border-radius:16px 16px 0 0;width:100%;max-width:500px;max-height:80vh;overflow-y:auto;padding:20px}
 .md h3{font-size:16px;margin-bottom:16px}
 .ma{display:flex;gap:8px;margin-top:16px}
 .ma .btn{flex:1}
 .ana-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
-.ana-card{background:#1b2340;border:1px solid #2a3354;border-radius:12px;padding:12px;text-align:center}
-.ana-card .t{font-size:10px;color:#9aa5c4;letter-spacing:1px}
+.ana-card{background:var(--sub);border:1px solid var(--line);border-radius:11px;padding:12px;text-align:center}
+.ana-card .t{font-size:10px;color:var(--mut);letter-spacing:1px}
 .ana-card .n{font-size:17px;font-weight:800;margin-top:2px}
-.ana-card .s{font-size:10px;color:#707c9e;margin-top:2px}
+.ana-card .s{font-size:10px;color:var(--mut);margin-top:2px;opacity:.8}
 .hm-wrap{overflow-x:auto;padding-bottom:4px}
 .hm-grid{display:grid;grid-auto-flow:column;grid-template-rows:repeat(7,13px);gap:3px;width:max-content}
-.hm-cell{width:13px;height:13px;border-radius:3px;background:#1b2340}
-.hm-leg{display:flex;align-items:center;gap:4px;font-size:10px;color:#9aa5c4;margin-top:8px;justify-content:flex-end}
+.hm-cell{width:13px;height:13px;border-radius:3px;background:var(--sub)}
+.hm-leg{display:flex;align-items:center;gap:4px;font-size:10px;color:var(--mut);margin-top:8px;justify-content:flex-end}
 .wd-row{display:flex;align-items:flex-end;gap:6px;height:130px;margin-top:8px}
 .wd-col{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:100%}
 .wd-bar{width:72%;border-radius:6px 6px 2px 2px;min-height:2px}
-.wd-lab{font-size:10px;color:#9aa5c4;margin-top:4px}
+.wd-lab{font-size:10px;color:var(--mut);margin-top:4px}
 .wd-val{font-size:9px;margin-bottom:2px;font-weight:700}
 svg text{font-family:-apple-system,BlinkMacSystemFont,'Hiragino Sans',sans-serif}
 </style>
@@ -112,23 +121,23 @@ svg text{font-family:-apple-system,BlinkMacSystemFont,'Hiragino Sans',sans-serif
   <div class="sub" id="hSub">データなし</div>
 </div>
 
-<div id="todayBanner" style="background:rgba(19,25,46,.97);padding:14px 20px;border-bottom:1px solid #2a3354;display:none">
+<div id="todayBanner" style="background:var(--bg2);padding:14px 20px;border-bottom:1px solid var(--line);display:none">
   <div style="display:flex;justify-content:center;gap:24px;align-items:flex-start">
     <div style="text-align:center;flex:1">
-      <div style="font-size:11px;color:#9aa5c4;font-weight:600">今日の収支</div>
+      <div style="font-size:11px;color:var(--mut);font-weight:600">今日の収支</div>
       <div id="sTodayPL" style="font-size:26px;font-weight:800;margin-top:2px" class="zero">0</div>
-      <div id="sTodayDetail" style="font-size:10px;color:#9aa5c4;margin-top:2px"></div>
+      <div id="sTodayDetail" style="font-size:10px;color:var(--mut);margin-top:2px"></div>
     </div>
-    <div style="width:1px;background:#2a3354;min-height:40px;align-self:stretch"></div>
+    <div style="width:1px;background:var(--line);min-height:40px;align-self:stretch"></div>
     <div style="text-align:center;flex:1">
-      <div style="font-size:11px;color:#9aa5c4;font-weight:600">貯メダル残高</div>
+      <div style="font-size:11px;color:var(--mut);font-weight:600">貯メダル残高</div>
       <div id="sMedalBal" style="font-size:20px;font-weight:800;margin-top:2px;color:#f59e0b">-</div>
-      <div id="sMedalDetail" style="font-size:10px;color:#9aa5c4;margin-top:2px"></div>
+      <div id="sMedalDetail" style="font-size:10px;color:var(--mut);margin-top:2px"></div>
     </div>
   </div>
 </div>
-<div id="medalOnlyBanner" style="background:rgba(19,25,46,.97);padding:12px 20px;border-bottom:1px solid #2a3354;display:none">
-  <div style="font-size:11px;color:#9aa5c4;font-weight:600;text-align:center;margin-bottom:6px">貯メダル残高</div>
+<div id="medalOnlyBanner" style="background:var(--bg2);padding:12px 20px;border-bottom:1px solid var(--line);display:none">
+  <div style="font-size:11px;color:var(--mut);font-weight:600;text-align:center;margin-bottom:6px">貯メダル残高</div>
   <div id="medalShopList"></div>
 </div>
 <div class="sb">
@@ -151,29 +160,29 @@ svg text{font-family:-apple-system,BlinkMacSystemFont,'Hiragino Sans',sans-serif
     <div class="cd">
       <div class="ct-t">収支を記録する</div>
       <div class="fg"><label>日付</label><input type="date" id="iDate"></div>
-      <div class="fg"><label>店舗名</label><select id="iShop" style="color:#e8ecff"><option value="">-- 店舗を選択 --</option></select><div style="font-size:11px;color:#94a3b8;margin-top:2px">※設定タブで店舗を追加できます</div></div>
+      <div class="fg"><label>店舗名</label><select id="iShop" style="color:var(--txt)"><option value="">-- 店舗を選択 --</option></select><div style="font-size:11px;color:#94a3b8;margin-top:2px">※設定タブで店舗を追加できます</div></div>
       <div class="fg"><label>機種名</label><input type="text" id="iMc" placeholder="例：バジリスク絆2" autocomplete="off" oninput="showSug()" onblur="setTimeout(hideSug,200)"></div>
       <div class="sg" id="sgBox"></div>
-      <div style="display:flex;gap:0;background:#1b2340;border-radius:8px;padding:3px;margin-bottom:12px">
-        <button class="unit-btn on" id="uYen" onclick="setUnit('yen')" style="flex:1;padding:8px;border:none;border-radius:6px;font-size:13px;font-weight:700;cursor:pointer;background:#a78bfa;color:#fff;transition:all .2s">円で入力</button>
-        <button class="unit-btn" id="uMedal" onclick="setUnit('medal')" style="flex:1;padding:8px;border:none;border-radius:6px;font-size:13px;font-weight:700;cursor:pointer;background:transparent;color:#9aa5c4;transition:all .2s">枚数で入力</button>
+      <div style="display:flex;gap:0;background:var(--sub);border-radius:8px;padding:3px;margin-bottom:12px">
+        <button class="unit-btn on" id="uYen" onclick="setUnit('yen')" style="flex:1;padding:8px;border:none;border-radius:6px;font-size:13px;font-weight:700;cursor:pointer;background:var(--acc);color:#fff;transition:all .2s">円で入力</button>
+        <button class="unit-btn" id="uMedal" onclick="setUnit('medal')" style="flex:1;padding:8px;border:none;border-radius:6px;font-size:13px;font-weight:700;cursor:pointer;background:transparent;color:var(--mut);transition:all .2s">枚数で入力</button>
       </div>
       <div class="fr">
         <div class="fg"><label id="lInv">投資額（円）</label><input type="number" id="iInv" placeholder="0" inputmode="numeric" oninput="updateConvertInfo()"></div>
         <div class="fg"><label id="lRet">回収額（円）</label><input type="number" id="iRet" placeholder="0" inputmode="numeric" oninput="updateConvertInfo()"></div>
       </div>
-      <div id="convertInfo" style="font-size:12px;color:#a78bfa;margin:-8px 0 12px;display:none"></div>
+      <div id="convertInfo" style="font-size:12px;color:var(--acc);margin:-8px 0 12px;display:none"></div>
       <div class="fg"><label>メモ（任意）</label><input type="text" id="iMemo" placeholder="例：AT3回、朝イチ軽かった"></div>
       <div style="margin-bottom:12px">
-        <button type="button" onclick="toggleDtl()" style="background:none;border:none;color:#a78bfa;font-size:13px;font-weight:600;cursor:pointer;padding:4px 0">▸ 詳細記録（任意・分析用） <span id="dtlArrow"></span></button>
-        <div id="dtlBox" style="display:none;border-top:1px dashed #2a3354;padding-top:12px;margin-top:4px">
+        <button type="button" onclick="toggleDtl()" style="background:none;border:none;color:var(--acc);font-size:13px;font-weight:600;cursor:pointer;padding:4px 0">▸ 詳細記録（任意・分析用） <span id="dtlArrow"></span></button>
+        <div id="dtlBox" style="display:none;border-top:1px dashed var(--line);padding-top:12px;margin-top:4px">
           <div class="fg"><label>台番（任意）</label><input type="text" id="iDai" placeholder="例：831" inputmode="numeric"></div>
           <div class="fr">
             <div class="fg"><label>打ち始めG数（任意）</label><input type="number" id="iGs" placeholder="例：350" inputmode="numeric" oninput="updateEvInfo()"></div>
             <div class="fg"><label>打ち終わりG数（任意）</label><input type="number" id="iGe" placeholder="例：5350" inputmode="numeric" oninput="updateEvInfo()"></div>
           </div>
           <div class="fg"><label>想定機械割％（任意）</label><input type="number" id="iRate" placeholder="例：105.5" step="0.1" inputmode="decimal" oninput="updateEvInfo()"></div>
-          <div id="evInfo" style="font-size:12px;color:#a78bfa;margin:-6px 0 10px;display:none"></div>
+          <div id="evInfo" style="font-size:12px;color:var(--acc);margin:-6px 0 10px;display:none"></div>
           <div class="fg"><label>台を選んだ根拠（任意・1タップ）</label>
             <div class="ps" id="basisChips" style="margin-bottom:0">
               <button type="button" class="pb" onclick="pickBasis(this)">SNS示唆</button>
@@ -246,7 +255,7 @@ svg text{font-family:-apple-system,BlinkMacSystemFont,'Hiragino Sans',sans-serif
     <div class="cd"><div class="ct-t">記録コレクション</div><div class="ana-grid" id="anaCards"></div></div>
     <div class="cd"><div class="ct-t">日別ヒートマップ（直近20週）</div>
       <div class="hm-wrap"><div class="hm-grid" id="anaHeat"></div></div>
-      <div class="hm-leg"><span>負け</span><span class="hm-cell" style="background:rgba(56,189,248,.9)"></span><span class="hm-cell" style="background:rgba(56,189,248,.45)"></span><span class="hm-cell"></span><span class="hm-cell" style="background:rgba(251,113,133,.45)"></span><span class="hm-cell" style="background:rgba(251,113,133,.9)"></span><span>勝ち</span></div>
+      <div class="hm-leg"><span>負け</span><span class="hm-cell" style="background:rgba(96,165,250,.9)"></span><span class="hm-cell" style="background:rgba(96,165,250,.45)"></span><span class="hm-cell"></span><span class="hm-cell" style="background:rgba(248,113,113,.45)"></span><span class="hm-cell" style="background:rgba(248,113,113,.9)"></span><span>勝ち</span></div>
     </div>
     <div class="cd"><div class="ct-t">曜日別の平均収支</div><div class="wd-row" id="anaWd"></div></div>
     <div class="cd"><div class="ct-t">店舗別成績</div><div id="anaShop"></div></div>
@@ -255,16 +264,23 @@ svg text{font-family:-apple-system,BlinkMacSystemFont,'Hiragino Sans',sans-serif
   <div class="tc" id="t-settings">
     <div class="cd">
       <div class="ct-t">貯メダル設定（店舗別）</div>
-      <p style="font-size:13px;color:#9aa5c4;margin-bottom:12px">店舗ごとの持ちメダルを管理します。記録時に「枚数で入力」した分は自動で増減。店で下ろした時などは、右の欄に今の枚数をそのまま打てば修正できます。</p>
+      <p style="font-size:13px;color:var(--mut);margin-bottom:12px">店舗ごとの持ちメダルを管理します。記録時に「枚数で入力」した分は自動で増減。店で下ろした時などは、右の欄に今の枚数をそのまま打てば修正できます。</p>
       <div id="medalShopSettings"></div>
       <div style="display:flex;gap:8px;margin-top:8px">
-        <input type="text" id="newShopName" placeholder="店舗名を入力" style="flex:1;padding:8px 12px;border:2px solid #2a3354;border-radius:8px;font-size:14px">
+        <input type="text" id="newShopName" placeholder="店舗名を入力" style="flex:1;padding:8px 12px;border:2px solid var(--line);border-radius:8px;font-size:14px">
         <button class="btn btn-s btn-p" onclick="addShopMedal()" style="white-space:nowrap">追加</button>
       </div>
     </div>
     <div class="cd">
+      <div class="ct-t">テーマ（見た目）</div>
+      <div class="ps" style="margin-bottom:0">
+        <button type="button" class="pb" id="thDark" onclick="setTheme('dark')">シンプルダーク</button>
+        <button type="button" class="pb" id="thLight" onclick="setTheme('light')">ライト（白×青）</button>
+      </div>
+    </div>
+    <div class="cd">
       <div class="ct-t">バックアップ・復元</div>
-      <p style="font-size:13px;color:#9aa5c4;margin-bottom:12px">データをJSONファイルとして書き出し・読み込みできます。週1回のバックアップをおすすめします。</p>
+      <p style="font-size:13px;color:var(--mut);margin-bottom:12px">データをJSONファイルとして書き出し・読み込みできます。週1回のバックアップをおすすめします。</p>
       <div class="bb">
         <button class="btn btn-s btn-o" onclick="expData()">バックアップ</button>
         <button class="btn btn-s btn-o" onclick="document.getElementById('impF').click()">復元</button>
@@ -273,12 +289,12 @@ svg text{font-family:-apple-system,BlinkMacSystemFont,'Hiragino Sans',sans-serif
     </div>
     <div class="cd">
       <div class="ct-t">データ管理</div>
-      <p style="font-size:13px;color:#9aa5c4;margin-bottom:12px">全データを削除します。この操作は取り消せません。</p>
+      <p style="font-size:13px;color:var(--mut);margin-bottom:12px">全データを削除します。この操作は取り消せません。</p>
       <button class="btn btn-s btn-d" onclick="document.getElementById('delMo').classList.add('sh')">全データ削除</button>
     </div>
     <div class="cd">
       <div class="ct-t">使い方</div>
-      <div style="font-size:13px;color:#9aa5c4;line-height:1.8">
+      <div style="font-size:13px;color:var(--mut);line-height:1.8">
         <p><b>1.</b> 「記録」タブで日付・店舗名・機種名・投資額・回収額を入力</p>
         <p><b>2.</b> 収支は自動で計算されます</p>
         <p><b>3.</b> 「履歴」で過去の記録を確認・編集・削除</p>
@@ -326,7 +342,7 @@ svg text{font-family:-apple-system,BlinkMacSystemFont,'Hiragino Sans',sans-serif
 <div class="mo" id="delMo">
   <div class="md">
     <h3>全データを削除しますか？</h3>
-    <p style="font-size:14px;color:#9aa5c4;margin-bottom:16px">この操作は元に戻せません。先にバックアップを取ることをおすすめします。</p>
+    <p style="font-size:14px;color:var(--mut);margin-bottom:16px">この操作は元に戻せません。先にバックアップを取ることをおすすめします。</p>
     <div class="ma">
       <button class="btn btn-o" onclick="document.getElementById('delMo').classList.remove('sh')">キャンセル</button>
       <button class="btn btn-d" onclick="clearAll()">削除する</button>
@@ -478,7 +494,7 @@ async function removeShop(shop){
   renderShopSettings();updateShopDropdown();rSummary();
   toast(shop+'を削除しました');
 }
-function renderShopSettings(){var el=document.getElementById('medalShopSettings');var sm=getShopMedals();var keys=Object.keys(sm).sort();if(keys.length===0){el.innerHTML='<p style="font-size:13px;color:#94a3b8;text-align:center;padding:8px 0">店舗を追加してください</p>';return;}var h='';for(var i=0;i<keys.length;i++){var k=keys[i],bal=calcShopMedalBalance(k);h+='<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;padding:10px;background:#1b2340;border-radius:8px">';h+='<div style="flex:1;min-width:0"><div style="font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+esc(k)+'</div>';h+='<div style="font-size:11px;color:#9aa5c4">持ちメダル <b style="color:#f59e0b">'+bal.toLocaleString()+'枚</b>（下ろした時はそのまま枚数を書き換え）</div></div>';h+='<div style="width:90px"><input type="number" value="'+bal+'" inputmode="numeric" style="width:100%;padding:6px;border:1.5px solid #2a3354;border-radius:6px;font-size:13px;text-align:right" onchange="updateShopBalance(\''+esc(k).replace(/'/g,"\\'")+'\',this)"><div style="font-size:9px;color:#94a3b8;text-align:center">現在枚数を直接修正</div></div>';h+='<button class="bi del" onclick="removeShop(\''+esc(k).replace(/'/g,"\\'")+'\')">🗑</button></div>';}el.innerHTML=h;}
+function renderShopSettings(){var el=document.getElementById('medalShopSettings');var sm=getShopMedals();var keys=Object.keys(sm).sort();if(keys.length===0){el.innerHTML='<p style="font-size:13px;color:#94a3b8;text-align:center;padding:8px 0">店舗を追加してください</p>';return;}var h='';for(var i=0;i<keys.length;i++){var k=keys[i],bal=calcShopMedalBalance(k);h+='<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;padding:10px;background:var(--sub);border-radius:8px">';h+='<div style="flex:1;min-width:0"><div style="font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+esc(k)+'</div>';h+='<div style="font-size:11px;color:var(--mut)">持ちメダル <b style="color:#f59e0b">'+bal.toLocaleString()+'枚</b>（下ろした時はそのまま枚数を書き換え）</div></div>';h+='<div style="width:90px"><input type="number" value="'+bal+'" inputmode="numeric" style="width:100%;padding:6px;border:1.5px solid var(--line);border-radius:6px;font-size:13px;text-align:right" onchange="updateShopBalance(\''+esc(k).replace(/'/g,"\\'")+'\',this)"><div style="font-size:9px;color:#94a3b8;text-align:center">現在枚数を直接修正</div></div>';h+='<button class="bi del" onclick="removeShop(\''+esc(k).replace(/'/g,"\\'")+'\')">🗑</button></div>';}el.innerHTML=h;}
 function gid(){return Date.now().toString(36)+Math.random().toString(36).substr(2,5);}
 function esc(s){var d=document.createElement('div');d.textContent=s;return d.innerHTML;}
 function fm(n){if(n===0)return '0';return (n>0?'+':'')+n.toLocaleString();}
@@ -490,14 +506,14 @@ function setUnit(u){
   curUnit=u;
   var yb=document.getElementById('uYen'),mb=document.getElementById('uMedal');
   if(u==='yen'){
-    yb.style.background='#a78bfa';yb.style.color='#fff';
-    mb.style.background='transparent';mb.style.color='#9aa5c4';
+    yb.style.background='var(--acc)';yb.style.color='#fff';
+    mb.style.background='transparent';mb.style.color='var(--mut)';
     document.getElementById('lInv').textContent='投資額（円）';
     document.getElementById('lRet').textContent='回収額（円）';
     document.getElementById('convertInfo').style.display='none';
   }else{
-    mb.style.background='#a78bfa';mb.style.color='#fff';
-    yb.style.background='transparent';yb.style.color='#9aa5c4';
+    mb.style.background='var(--acc)';mb.style.color='#fff';
+    yb.style.background='transparent';yb.style.color='var(--mut)';
     document.getElementById('lInv').textContent='投資（枚数）';
     document.getElementById('lRet').textContent='回収（枚数）';
     updateConvertInfo();
@@ -653,7 +669,7 @@ function rSummary(){
         document.getElementById('sMedalDetail').innerHTML='';
         var multiH='';
         for(var i=0;i<shopBals.length;i++){
-          multiH+='<div style="font-size:12px;margin-bottom:2px"><span style="color:#9aa5c4">'+esc(shopBals[i].name)+'</span> <b style="color:#f59e0b">'+shopBals[i].balance.toLocaleString()+'枚</b></div>';
+          multiH+='<div style="font-size:12px;margin-bottom:2px"><span style="color:var(--mut)">'+esc(shopBals[i].name)+'</span> <b style="color:#f59e0b">'+shopBals[i].balance.toLocaleString()+'枚</b></div>';
         }
         document.getElementById('sMedalBal').innerHTML=multiH;
         document.getElementById('sMedalBal').style.fontSize='inherit';
@@ -671,7 +687,7 @@ function rSummary(){
     var slH='';
     for(var i=0;i<shopBals.length;i++){
       slH+='<div style="display:flex;justify-content:space-between;align-items:center;padding:4px 0">';
-      slH+='<span style="font-size:13px;color:#e8ecff">'+esc(shopBals[i].name)+'</span>';
+      slH+='<span style="font-size:13px;color:var(--txt)">'+esc(shopBals[i].name)+'</span>';
       slH+='<b style="font-size:15px;color:#f59e0b">'+shopBals[i].balance.toLocaleString()+'枚</b></div>';
     }
     slEl.innerHTML=slH;
@@ -890,8 +906,8 @@ function rSlump(){
   function gx(i){return pad.l+(i/(pts.length-1))*gw;}
   function gy(v){return pad.t+(1-(v-mn)/(mx-mn))*gh;}
 
-  var lineColor=pts[pts.length-1]>=0?'#fb7185':'#38bdf8';
-  var fillColor=pts[pts.length-1]>=0?'rgba(251,113,133,0.12)':'rgba(56,189,248,0.12)';
+  var lineColor=pts[pts.length-1]>=0?'#ef4444':'#3b82f6';
+  var fillColor=pts[pts.length-1]>=0?'rgba(239,68,68,0.12)':'rgba(59,130,246,0.12)';
 
   var pathD='M'+gx(0)+','+gy(pts[0]);
   for(var i=1;i<pts.length;i++)pathD+=' L'+gx(i)+','+gy(pts[i]);
@@ -907,7 +923,7 @@ function rSlump(){
     var y=pad.t+(i/yTicks)*gh;
     var label=Math.round(v/1000)+'k';
     yLabels+='<text x="'+(pad.l-8)+'" y="'+(y+4)+'" text-anchor="end" fill="#94a3b8" font-size="10">'+label+'</text>';
-    yLabels+='<line x1="'+pad.l+'" y1="'+y+'" x2="'+(W-pad.r)+'" y2="'+y+'" stroke="#2a3354" stroke-width="1"/>';
+    yLabels+='<line x1="'+pad.l+'" y1="'+y+'" x2="'+(W-pad.r)+'" y2="'+y+'" stroke="rgba(128,136,150,0.25)" stroke-width="1"/>';
   }
 
   var xLabels='',step=Math.max(1,Math.floor(pts.length/6));
@@ -972,7 +988,7 @@ function rBar(){
   for(var i=0;i<=yTicks;i++){
     var v=mn+(mx-mn)*(1-i/yTicks);var y=pad.t+(i/yTicks)*gh;
     svg+='<text x="'+(pad.l-8)+'" y="'+(y+4)+'" text-anchor="end" fill="#94a3b8" font-size="10">'+Math.round(v/1000)+'k</text>';
-    svg+='<line x1="'+pad.l+'" y1="'+y+'" x2="'+(W-pad.r)+'" y2="'+y+'" stroke="#2a3354" stroke-width="1"/>';
+    svg+='<line x1="'+pad.l+'" y1="'+y+'" x2="'+(W-pad.r)+'" y2="'+y+'" stroke="rgba(128,136,150,0.25)" stroke-width="1"/>';
   }
   svg+='<line x1="'+pad.l+'" y1="'+zeroY+'" x2="'+(W-pad.r)+'" y2="'+zeroY+'" stroke="#94a3b8" stroke-width="1"/>';
 
@@ -983,7 +999,7 @@ function rBar(){
     var barY=v>=0?gy(v):zeroY;
     var barH=Math.abs(gy(v)-zeroY);
     if(barH<1)barH=1;
-    var col=v>=0?'rgba(251,113,133,0.8)':'rgba(56,189,248,0.8)';
+    var col=v>=0?'rgba(239,68,68,0.75)':'rgba(59,130,246,0.75)';
     svg+='<rect x="'+x+'" y="'+barY+'" width="'+bw+'" height="'+barH+'" rx="3" fill="'+col+'"/>';
     var label=keys[i].split('-')[1]+'月';
     svg+='<text x="'+(x+bw/2)+'" y="'+(H-pad.b+16)+'" text-anchor="middle" fill="#94a3b8" font-size="10">'+label+'</text>';
@@ -1178,13 +1194,13 @@ function rAnaHeat(){
   while(cur<=end){
     var ds=cur.getFullYear()+'-'+String(cur.getMonth()+1).padStart(2,'0')+'-'+String(cur.getDate()).padStart(2,'0');
     var v=dm[ds];
-    var bg='#1b2340';
+    var st='';
     if(v!=null&&v!==0){
       var a=Math.min(1,0.25+0.75*Math.abs(v)/mx);
-      bg=v>0?'rgba(251,113,133,'+a.toFixed(2)+')':'rgba(56,189,248,'+a.toFixed(2)+')';
+      st='background:'+(v>0?'rgba(248,113,113,'+a.toFixed(2)+')':'rgba(96,165,250,'+a.toFixed(2)+')');
     }
-    var future=cur>today;
-    h+='<div class="hm-cell" style="background:'+(future?'transparent':bg)+'" title="'+ds+(v!=null?' '+fm(v)+'円':'')+'"></div>';
+    if(cur>today)st='background:transparent';
+    h+='<div class="hm-cell" style="'+st+'" title="'+ds+(v!=null?' '+fm(v)+'円':'')+'"></div>';
     cur.setDate(cur.getDate()+1);
   }
   el.innerHTML=h;
@@ -1200,7 +1216,7 @@ function rAnaWd(){
   var h='';
   for(var i=0;i<7;i++){
     var pct=Math.round(Math.abs(avgs[i])/mx*100);
-    var col=avgs[i]>0?'linear-gradient(180deg,#fb7185,#be123c)':avgs[i]<0?'linear-gradient(180deg,#38bdf8,#0369a1)':'#2a3354';
+    var col=avgs[i]>0?'linear-gradient(180deg,#ef4444,#b91c1c)':avgs[i]<0?'linear-gradient(180deg,#3b82f6,#1d4ed8)':'var(--line)';
     h+='<div class="wd-col"><div class="wd-val '+gc(avgs[i])+'">'+(cnts[i]?Math.round(avgs[i]/1000)+'k':'-')+'</div>';
     h+='<div class="wd-bar" style="height:'+Math.max(2,pct)+'%;background:'+col+'"></div>';
     h+='<div class="wd-lab">'+names[i]+(cnts[i]?'<br>'+cnts[i]+'回':'')+'</div></div>';
@@ -1227,6 +1243,20 @@ function rAnaShop(){
   }
   h+='</tbody></table>';el.innerHTML=h;
 }
+function setTheme(t){
+  document.body.dataset.theme=t;
+  try{localStorage.setItem('slotTheme',t);}catch(e){}
+  var mc=document.querySelector('meta[name="theme-color"]');
+  if(mc)mc.setAttribute('content',t==='light'?'#1e3a8a':'#15161b');
+  var d=document.getElementById('thDark'),l=document.getElementById('thLight');
+  if(d&&l){d.classList.toggle('on',t!=='light');l.classList.toggle('on',t==='light');}
+}
+(function(){
+  var t='dark';
+  try{t=localStorage.getItem('slotTheme')||'dark';}catch(e){}
+  document.body.dataset.theme=t;
+  window.addEventListener('DOMContentLoaded',function(){setTheme(t);});
+})();
 function refresh(){rSummary();rRecent();}
 
 // ===== Service Worker登録 (PWAオフライン対応) =====
