@@ -185,13 +185,6 @@ svg text{font-family:-apple-system,BlinkMacSystemFont,'Hiragino Sans',sans-serif
         <button type="button" onclick="toggleDtl()" style="background:none;border:none;color:var(--acc);font-size:13px;font-weight:600;cursor:pointer;padding:4px 0">▸ 詳細記録（任意・分析用） <span id="dtlArrow"></span></button>
         <div id="dtlBox" style="display:none;border-top:1px dashed var(--line);padding-top:12px;margin-top:4px">
           <div class="fg"><label>台番（任意）</label><input type="text" id="iDai" placeholder="例：831" inputmode="numeric"></div>
-          <div class="fr">
-            <div class="fg"><label for="iGs">打ち始めG数（任意）</label><input type="number" id="iGs" placeholder="例：350" min="0" inputmode="numeric" oninput="updateEvInfo()"></div>
-            <div class="fg"><label for="iGe">打ち終わりG数（任意）</label><input type="number" id="iGe" placeholder="例：5350" min="0" inputmode="numeric" oninput="updateEvInfo()"></div>
-          </div>
-          <div class="fg"><label for="iG">回したG数（合計を直接入力する場合）</label><input type="number" id="iG" min="1" inputmode="numeric" placeholder="AT・ボーナス中を含む" oninput="updateEvInfo()"></div>
-          <div class="fg"><label>想定機械割％（任意）</label><input type="number" id="iRate" placeholder="例：105.5" step="0.1" inputmode="decimal" oninput="updateEvInfo()"></div>
-          <div id="evInfo" style="font-size:12px;color:var(--acc);margin:-6px 0 10px;display:none"></div>
           <div class="fg"><label>台を選んだ根拠（任意・1タップ）</label>
             <div class="ps" id="basisChips" style="margin-bottom:0">
               <button type="button" class="pb" onclick="pickBasis(this)">SNS示唆</button>
@@ -236,28 +229,25 @@ svg text{font-family:-apple-system,BlinkMacSystemFont,'Hiragino Sans',sans-serif
   <div class="tc" id="t-stats">
     <div class="cd">
       <div class="payout-head">
-        <div class="ct-t">実戦の出玉（推定）</div>
-        <select id="payoutPeriod" aria-label="実戦の出玉の集計期間" onchange="rPayoutStats()">
+        <div class="ct-t">投資・回収からの試算</div>
+        <select id="payoutPeriod" aria-label="試算の集計期間" onchange="rPayoutStats()">
           <option value="all">全期間</option><option value="month">今月</option><option value="3m">3ヶ月</option><option value="6m">半年</option><option value="1y">1年</option><option value="2y">2年</option><option value="3y">3年</option>
         </select>
       </div>
       <div class="ana-grid">
         <div class="ana-card"><div class="t">総払い出し枚数</div><div class="n" id="payoutCoins">N/A</div></div>
-        <div class="ana-card"><div class="t">実戦機械割</div><div class="n" id="payoutRate">N/A</div></div>
+        <div class="ana-card"><div class="t">機械割の目安</div><div class="n" id="payoutRate">N/A</div></div>
       </div>
       <p class="payout-note" id="payoutSensitivity"></p>
       <p class="payout-note" id="payoutCoverage"></p>
       <p class="payout-note">金額回収率 <strong id="cashRecovery">N/A</strong><br><span id="cashTotals"></span></p>
       <details class="payout-note"><summary>計算方法</summary>
-        <p id="payoutBasis"></p>
-        <p>G数が分かる実戦は、AT・ボーナス中を含むG数 × 3枚で総投入を計算します。G数がない実戦では、投資枚数と回収枚数の合計に倍率を掛け、遊技中に再投入した枚数を見積もります。総投入は投資枚数＋再投入、総払い出しは回収枚数＋再投入です。</p>
-        <p>倍率は、端末内の全期間のG数付き記録で「G数 × 3枚 − 投資枚数」の合計を「投資枚数 ＋ 回収枚数」の合計で割った値です。短時間の実戦が多いなど、記録した時期や打ち方の違いで概算は変わります。</p>
-        <p>機械割は総払い出しの合計 ÷ 総投入の合計 × 100、金額回収率は回収額の合計 ÷ 投資額の合計 × 100です。円だけの記録は1枚20円で枚数に換算します。</p>
+        <p>総投入は投資枚数＋遊技中の再投入枚数、総払い出しは回収枚数＋再投入枚数です。再投入枚数は全記録で一律に（投資枚数＋回収枚数）の2倍と仮定します。円だけの記録は1枚20円で換算します。</p>
+        <p>機械割の目安は、期間内の総払い出し ÷ 総投入 × 100で求めます。金額回収率は、記録した回収額の合計 ÷ 投資額の合計 × 100です。</p>
       </details>
     </div>
     <div class="cd"><div class="ct-t">月別集計</div><div id="mStats"></div></div>
     <div class="cd"><div class="ct-t">根拠別集計（どの情報源が儲かるか）</div><div id="bStats"></div></div>
-    <div class="cd"><div class="ct-t">期待値の答え合わせ（想定 vs 実績）</div><div id="evStats"></div></div>
     <div class="cd"><div class="ct-t">機種別集計</div><div id="kStats"></div></div>
   </div>
 
@@ -351,18 +341,10 @@ svg text{font-family:-apple-system,BlinkMacSystemFont,'Hiragino Sans',sans-serif
       <div class="fg"><label>投資（枚数）</label><input type="number" id="eMInv" inputmode="numeric" placeholder="なし"></div>
       <div class="fg"><label>回収（枚数）</label><input type="number" id="eMRet" inputmode="numeric" placeholder="なし"></div>
     </div>
+    <div class="payout-preview" id="ePayout" aria-live="polite"></div>
     <div class="fg"><label>メモ</label><input type="text" id="eMemo"></div>
     <div class="fg"><label>台番</label><input type="text" id="eDai" placeholder="なし"></div>
-    <div class="fr">
-      <div class="fg"><label for="eGs">打ち始めG数</label><input type="number" id="eGs" min="0" placeholder="なし"></div>
-      <div class="fg"><label for="eGe">打ち終わりG数</label><input type="number" id="eGe" min="0" placeholder="なし"></div>
-    </div>
-    <div class="fg"><label for="eG">回したG数（合計を直接入力する場合）</label><input type="number" id="eG" min="1" inputmode="numeric" placeholder="AT・ボーナス中を含む"></div>
-    <div class="payout-preview" id="ePayout" aria-live="polite"></div>
-    <div class="fr">
-      <div class="fg"><label>想定機械割％</label><input type="number" id="eRate" step="0.1" placeholder="なし"></div>
-      <div class="fg"><label>根拠</label><select id="eBasis"><option value="">なし</option><option>SNS示唆</option><option>ポエム</option><option>データ予測</option><option>肌感</option><option>ハイエナ</option><option>その他</option></select></div>
-    </div>
+    <div class="fg"><label for="eBasis">根拠</label><select id="eBasis"><option value="">なし</option><option>SNS示唆</option><option>ポエム</option><option>データ予測</option><option>肌感</option><option>ハイエナ</option><option>その他</option></select></div>
     <div class="fg"><label>設定示唆・確定</label><select id="eKaku"><option value="">なし</option><option>示唆弱</option><option>示唆強</option><option>456確</option><option>6確</option></select></div>
     <div class="ma">
       <button class="btn btn-o" onclick="document.getElementById('edMo').classList.remove('sh')">キャンセル</button>
@@ -551,7 +533,7 @@ function setUnit(u){
   updateConvertInfo();
 }
 function updateConvertInfo(){
-  updateEvInfo();
+  updateFormPayout('i');
   if(curUnit!=='medal'){document.getElementById('convertInfo').style.display='none';return;}
   var inv=Number(document.getElementById('iInv').value)||0;
   var ret=Number(document.getElementById('iRet').value)||0;
@@ -577,7 +559,7 @@ function switchTab(name){
   tabs[idx].classList.add('on');
   contents[idx].classList.add('on');
   if(name==='history')rHist();
-  if(name==='stats'){rPayoutStats();rMonth();rBasis();rEv();rMc();}
+  if(name==='stats'){rPayoutStats();rMonth();rBasis();rMc();}
   if(name==='graph'){rSlump();rBar();}
   if(name==='analy'){rAnaly();}
   if(name==='settings')renderShopSettings();
@@ -601,10 +583,7 @@ async function addRec(){
   if(mInv!==null){rec.mInv=mInv;rec.mRet=mRet;}
   // 詳細記録（任意）
   var dai=document.getElementById('iDai').value.trim();
-  var rate=parseFloat(document.getElementById('iRate').value)||0;
   if(dai)rec.dai=dai;
-  Object.assign(rec,formGameFields('i'));
-  if(rate>0)rec.rate=rate;
   if(curBasis)rec.basis=curBasis;
   if(curKaku)rec.kaku=curKaku;
   // 枚数モードで新規店舗なら貯メダル設定にも自動登録
@@ -619,10 +598,6 @@ async function addRec(){
   document.getElementById('iRet').value='';
   document.getElementById('iMemo').value='';
   document.getElementById('iDai').value='';
-  document.getElementById('iGs').value='';
-  document.getElementById('iGe').value='';
-  document.getElementById('iG').value='';
-  document.getElementById('iRate').value='';
   clearChips();
   updateConvertInfo();
   initDate();
@@ -800,13 +775,8 @@ function openEd(id){
   document.getElementById('eMRet').value=r.mRet!=null?r.mRet:'';
   document.getElementById('eMemo').value=r.memo||'';
   document.getElementById('eDai').value=r.dai||'';
-  document.getElementById('eGs').value=r.gs!=null?r.gs:'';
-  document.getElementById('eGe').value=r.ge!=null?r.ge:'';
-  document.getElementById('eG').value=hasGameRange(r)?'':(r.g??'');
-  document.getElementById('eRate').value=r.rate!=null?r.rate:'';
   document.getElementById('eBasis').value=r.basis||'';
   document.getElementById('eKaku').value=r.kaku||'';
-  editPayoutModel=estimateReuse(R.filter(record=>record.id!==id));
   updateFormPayout('e');
   document.getElementById('edMo').classList.add('sh');
 }
@@ -827,13 +797,9 @@ async function saveEd(){
       else{delete R[i].mInv;delete R[i].mRet;}
       R[i].memo=document.getElementById('eMemo').value.trim();
       var ed=document.getElementById('eDai').value.trim();
-      delete R[i].gs;delete R[i].ge;delete R[i].g;
-      Object.assign(R[i],formGameFields('e'));
-      var er=parseFloat(document.getElementById('eRate').value)||0;
       var eb=document.getElementById('eBasis').value;
       var ek=document.getElementById('eKaku').value;
       if(ed)R[i].dai=ed;else delete R[i].dai;
-      if(er>0)R[i].rate=er;else delete R[i].rate;
       if(eb)R[i].basis=eb;else delete R[i].basis;
       if(ek)R[i].kaku=ek;else delete R[i].kaku;
       updatedRec=R[i];
@@ -1106,146 +1072,70 @@ function clearChips(){
   var b=document.getElementById('kakuChips').querySelectorAll('.pb');
   for(var i=0;i<b.length;i++)b[i].classList.remove('on');
 }
-// 想定期待値: G数×3枚×(機械割-100%)
-const MEDALS_PER_GAME=3;
-const DEFAULT_REUSE_FACTOR=2;
-let payoutModel=estimateReuse([]);
-let editPayoutModel=payoutModel;
-function calcEv(g,rate){return Math.round(g*MEDALS_PER_GAME*(rate/100-1));}
+// 投資・回収に含まれない遊技中の再投入枚数を試算するための仮定。
+const ASSUMED_REUSE_FACTOR=2;
 
 function wholeCount(value){
   if(typeof value!=='number' && (typeof value!=='string' || value.trim()===''))return null;
   const count=Number(value);
   return Number.isSafeInteger(count) && count>=0 ? count : null;
 }
-function hasGameRange(record){
-  return record.gs!=null && record.gs!=='' && record.ge!=null && record.ge!=='';
-}
 function validPayoutInputs(prefix){
-  const suffixes=['Inv','Ret','Gs','Ge','G'];
+  const suffixes=['Inv','Ret'];
   if(prefix==='e')suffixes.push('MInv','MRet');
   return suffixes.every(suffix=>document.getElementById(prefix+suffix).reportValidity());
-}
-function playedGames(record){
-  if(hasGameRange(record)){
-    const start=wholeCount(record.gs);
-    const end=wholeCount(record.ge);
-    return start!==null && end!==null && end>start ? end-start : 0;
-  }
-  return wholeCount(record.g)||0;
-}
-function formGameFields(prefix){
-  const start=document.getElementById(prefix+'Gs').value;
-  const end=document.getElementById(prefix+'Ge').value;
-  const fields={};
-  if(start!=='')fields.gs=Number(start);
-  if(end!=='')fields.ge=Number(end);
-  fields.g=document.getElementById(prefix+'G').value;
-  const games=playedGames(fields);
-  if(games>0)fields.g=games;else delete fields.g;
-  return fields;
 }
 function payoutInputs(record){
   const fromYen=record.mInv==null && record.mRet==null;
   const rawInvested=wholeCount(fromYen?record.invest:record.mInv);
   const rawReturned=wholeCount(fromYen?record.ret:record.mRet);
-  if(rawInvested===null || rawReturned===null)return null;
+  if(rawInvested===null || rawReturned===null)return {reason:'投資・回収を要確認'};
+  if(rawInvested===0 && rawReturned===0)return {reason:'投資・回収がともに0'};
   const unit=fromYen?MEDAL_RATE:1;
-  const invested=rawInvested/unit, returned=rawReturned/unit;
-  const games=playedGames(record);
-  const stakes=games*MEDALS_PER_GAME;
-  const usable=games>0 && stakes+returned>=invested;
-  const checkGames=!usable && (hasGameRange(record) || record.g!=null);
-  return {invested,returned,fromYen,recordedIn:usable?stakes:null,checkGames};
+  return {invested:rawInvested/unit,returned:rawReturned/unit,fromYen};
 }
-function estimateReuse(records){
-  let reused=0, exchanged=0, samples=0;
-  for(const record of records){
-    const amounts=payoutInputs(record);
-    if(!amounts || amounts.recordedIn===null)continue;
-    const volume=amounts.invested+amounts.returned;
-    if(volume===0)continue;
-    reused+=amounts.recordedIn-amounts.invested;
-    exchanged+=volume;
-    samples++;
-  }
-  if(exchanged>0 && reused>0)return {factor:reused/exchanged,samples};
-  return {factor:DEFAULT_REUSE_FACTOR,samples:0};
+function estimatePayout(invested,returned,factor=ASSUMED_REUSE_FACTOR){
+  const reused=(invested+returned)*factor;
+  return {coinsIn:invested+reused,coinsOut:returned+reused};
 }
-function recordPayout(record,model=payoutModel){
-  const amounts=payoutInputs(record);
-  if(!amounts)return {reason:'投資・回収を要確認'};
-  const {invested,returned,fromYen,recordedIn,checkGames}=amounts;
-  if(recordedIn!==null){
-    return {coinsIn:recordedIn,coinsOut:recordedIn+(returned-invested),fromYen,estimated:false};
-  }
-  if(invested+returned===0)return {reason:'金額・G数不足'};
-  const reused=(invested+returned)*model.factor;
-  return {coinsIn:invested+reused,coinsOut:returned+reused,fromYen,estimated:true,
-    reused,checkGames,assumed:model.samples===0};
-}
-function formatCoins(value){return Math.round(value).toLocaleString('ja-JP')+'枚';}
-function displayPayoutCoins(value,estimated){
-  if(!estimated)return formatCoins(value);
+function displayPayoutCoins(value){
   const scale=value>=10000?10000:1;
   const rounded=Number((value/scale).toPrecision(3));
   return '約'+rounded.toLocaleString('ja-JP')+(scale===10000?'万枚':'枚');
 }
 function formatPayoutRate(coinsOut,coinsIn){return (coinsOut/coinsIn*100).toFixed(1)+'%';}
-function payoutLine(result){
-  if(result.reason)return '総払い出し・実戦機械割 N/A（'+result.reason+'）';
-  const basis=result.assumed?'再投入を（投資＋回収）の'+DEFAULT_REUSE_FACTOR+'倍と仮定':(result.estimated?'金額から概算':'G数入力');
-  const notes=[basis];
-  if(result.checkGames)notes.push('G数・差枚を要確認');
-  if(result.fromYen)notes.push('20円/枚換算');
-  return '総払い出し '+displayPayoutCoins(result.coinsOut,result.estimated)+' ／ 実戦機械割 '
-    +(result.estimated?'約':'')+formatPayoutRate(result.coinsOut,result.coinsIn)+'（'+notes.join('・')+'）';
+function payoutLine(record){
+  const amounts=payoutInputs(record);
+  if(amounts.reason)return '総払い出し・機械割の目安 N/A（'+amounts.reason+'）';
+  const result=estimatePayout(amounts.invested,amounts.returned);
+  const basis='再投入を（投資＋回収）の'+ASSUMED_REUSE_FACTOR+'倍と仮定';
+  return '総払い出し '+displayPayoutCoins(result.coinsOut)+' ／ 機械割の目安 約'
+    +formatPayoutRate(result.coinsOut,result.coinsIn)+'（'+basis+(amounts.fromYen?'・20円/枚換算':'')+'）';
 }
 function updateFormPayout(prefix){
-  const fields=formGameFields(prefix);
-  const directGames=document.getElementById(prefix+'G');
-  directGames.disabled=hasGameRange(fields);
-  directGames.parentElement.hidden=directGames.disabled;
   const useMedals=prefix==='i' ? curUnit==='medal' :
     document.getElementById('eMInv').value!=='' || document.getElementById('eMRet').value!=='';
   const amountPrefix=prefix==='e' && useMedals ? 'eM' : prefix;
   const invested=document.getElementById(amountPrefix+'Inv').value;
   const returned=document.getElementById(amountPrefix+'Ret').value;
-  if(invested!=='' || returned!==''){
-    fields[useMedals?'mInv':'invest']=invested||0;
-    fields[useMedals?'mRet':'ret']=returned||0;
-  }
   const preview=document.getElementById(prefix+'Payout');
-  preview.hidden=prefix==='i' && invested==='' && returned==='' && !fields.g;
-  preview.textContent=payoutLine(recordPayout(fields,prefix==='e'?editPayoutModel:payoutModel));
-  return fields.g||0;
-}
-function updateEvInfo(){
-  var g=updateFormPayout('i');
-  var rate=parseFloat(document.getElementById('iRate').value)||0;
-  var el=document.getElementById('evInfo');
-  if(g>0){
-    var t='回したG数: '+g.toLocaleString()+'G';
-    if(rate>0){var ev=calcEv(g,rate);t+=' ／ 想定期待値: '+(ev>=0?'+':'')+ev.toLocaleString()+'枚（約'+(ev>=0?'+':'')+(ev*MEDAL_RATE).toLocaleString()+'円）';}
-    el.textContent=t;el.style.display='block';
-  }else{el.style.display='none';}
+  preview.hidden=invested==='' && returned==='';
+  if(preview.hidden)return;
+  const fields=useMedals?{mInv:invested||0,mRet:returned||0}:{invest:invested||0,ret:returned||0};
+  preview.textContent=payoutLine(fields);
 }
 function recordDetails(r){
   var amounts='投資 '+(r.invest??'—').toLocaleString()+' / 回収 '+(r.ret??'—').toLocaleString();
   if(r.mInv!=null && r.mRet!=null)amounts+=' ('+r.mInv.toLocaleString()+'枚→'+r.mRet.toLocaleString()+'枚)';
   var t=esc(amounts);
-  var games=playedGames(r);
   if(r.dai)t+=' / #'+esc(r.dai);
-  if(games)t+=' / '+games.toLocaleString()+'G回し';
-  if(r.gs!=null&&!games)t+=' / 打始'+esc(r.gs)+'G';
   if(r.basis)t+=' / '+esc(r.basis);
   if(r.kaku)t+=' / '+esc(r.kaku);
   if(r.memo)t+=' / '+esc(r.memo);
-  return '<div class="hdt">'+t+'</div><div class="hdt">'+payoutLine(recordPayout(r))+'</div>';
+  return '<div class="hdt">'+t+'</div><div class="hdt">'+payoutLine(r)+'</div>';
 }
 function payoutTotals(records){
-  const totals={coinsIn:0,coinsOut:0,measuredIn:0,measuredOut:0,measured:0,estimated:0,
-    estimatedReuse:0,checkGames:0,fromYen:0,cashIn:0,cashOut:0,cashCount:0,skipped:new Map()};
+  const totals={invested:0,returned:0,included:0,fromYen:0,cashIn:0,cashOut:0,cashCount:0,skipped:new Map()};
   for(const record of records){
     const cashIn=wholeCount(record.invest),cashOut=wholeCount(record.ret);
     if(cashIn!==null && cashOut!==null){
@@ -1253,54 +1143,41 @@ function payoutTotals(records){
       totals.cashOut+=cashOut;
       totals.cashCount++;
     }
-    const result=recordPayout(record);
-    if(result.reason){
-      totals.skipped.set(result.reason,(totals.skipped.get(result.reason)||0)+1);
+    const amounts=payoutInputs(record);
+    if(amounts.reason){
+      totals.skipped.set(amounts.reason,(totals.skipped.get(amounts.reason)||0)+1);
       continue;
     }
-    totals.coinsIn+=result.coinsIn;
-    totals.coinsOut+=result.coinsOut;
-    if(result.fromYen)totals.fromYen++;
-    if(result.estimated){
-      totals.estimated++;
-      totals.estimatedReuse+=result.reused;
-      if(result.checkGames)totals.checkGames++;
-    }else{
-      totals.measured++;
-      totals.measuredIn+=result.coinsIn;
-      totals.measuredOut+=result.coinsOut;
-    }
+    totals.invested+=amounts.invested;
+    totals.returned+=amounts.returned;
+    totals.included++;
+    if(amounts.fromYen)totals.fromYen++;
   }
   return totals;
 }
 function rPayoutStats(){
   const records=filterByPeriod(document.getElementById('payoutPeriod').value);
   const t=payoutTotals(records);
-  const included=t.measured+t.estimated;
-  document.getElementById('payoutCoins').textContent=included?displayPayoutCoins(t.coinsOut,t.estimated>0):'N/A';
-  document.getElementById('payoutRate').textContent=included?(t.estimated?'約':'')+formatPayoutRate(t.coinsOut,t.coinsIn):'N/A';
-  const notes=['計算対象 '+included+' / '+records.length+'件'];
-  if(included)notes.push('G数入力 '+t.measured+'件','金額から概算 '+t.estimated+'件');
-  if(t.checkGames)notes.push('概算のうちG数・差枚を要確認 '+t.checkGames+'件');
+  const payout=estimatePayout(t.invested,t.returned);
+  document.getElementById('payoutCoins').textContent=t.included?displayPayoutCoins(payout.coinsOut):'N/A';
+  document.getElementById('payoutRate').textContent=t.included?'約'+formatPayoutRate(payout.coinsOut,payout.coinsIn):'N/A';
+  const notes=['計算対象 '+t.included+' / '+records.length+'件'];
+  if(t.fromYen)notes.push('うち20円/枚換算 '+t.fromYen+'件');
   for(const [reason,count] of t.skipped)notes.push(reason+' '+count+'件');
   document.getElementById('payoutCoverage').textContent=notes.join(' ／ ');
   const sensitivity=document.getElementById('payoutSensitivity');
-  sensitivity.hidden=!t.estimated;
-  if(t.estimated){
-    const basis=payoutModel.samples?'全期間のG数付き'+payoutModel.samples+'件を参考':'再投入を（投資＋回収）の'+DEFAULT_REUSE_FACTOR+'倍と仮定';
-    const half=t.estimatedReuse/2;
-    const rates=[(t.coinsOut-half)/(t.coinsIn-half),(t.coinsOut+t.estimatedReuse)/(t.coinsIn+t.estimatedReuse)];
+  sensitivity.hidden=!t.included;
+  if(t.included){
+    const rates=[1,4].map(factor=>{
+      const scenario=estimatePayout(t.invested,t.returned,factor);
+      return scenario.coinsOut/scenario.coinsIn;
+    });
     const range=(Math.min(...rates)*100).toFixed(1)+'〜'+(Math.max(...rates)*100).toFixed(1)+'%';
-    sensitivity.textContent=basis+'。概算分の再投入が半分〜2倍なら '+range+'。';
+    sensitivity.textContent='再投入を（投資＋回収）の'+ASSUMED_REUSE_FACTOR+'倍と仮定。1〜4倍で試算すると '+range+'。';
   }
   document.getElementById('cashRecovery').textContent=t.cashIn>0?formatPayoutRate(t.cashOut,t.cashIn):'N/A';
   const cashNotes=t.cashCount?'投資 '+t.cashIn.toLocaleString('ja-JP')+'円 ／ 回収 '+t.cashOut.toLocaleString('ja-JP')+'円':'';
   document.getElementById('cashTotals').textContent=cashNotes+(t.cashCount && t.cashCount!==records.length?'（金額記録 '+t.cashCount+'件）':'');
-  const details=[];
-  if(t.measured)details.push('G数入力分のみの機械割 '+formatPayoutRate(t.measuredOut,t.measuredIn)+'（'+t.measured+'件）');
-  if(t.estimated)details.push('再投入の倍率 '+payoutModel.factor.toFixed(2)+'倍'+(payoutModel.samples?'':'（倍率を推定できないときの仮定）'));
-  if(t.fromYen)details.push('20円/枚換算 '+t.fromYen+'件');
-  document.getElementById('payoutBasis').textContent=details.join(' ／ ');
 }
 // --- 根拠別集計 ---
 function rBasis(){
@@ -1322,23 +1199,6 @@ function rBasis(){
     h+='<td>'+wr+'%<div class="wr"><div class="wf" style="width:'+wr+'%"></div></div></td></tr>';
   }
   h+='</tbody></table>';el.innerHTML=h;
-}
-// --- 期待値検証 ---
-function rEv(){
-  var el=document.getElementById('evStats');
-  var evSum=0,plSum=0,cnt=0;
-  for(var i=0;i<R.length;i++){
-    var r=R[i];
-    if(r.g&&r.rate){evSum+=calcEv(r.g,r.rate)*MEDAL_RATE;plSum+=r.pl;cnt++;}
-  }
-  if(cnt===0){el.innerHTML='<div class="em"><p>G数と想定機械割の入った記録がまだありません<br><span style="font-size:12px">両方入れると「読み通りの期待値が出ているか」を答え合わせできます</span></p></div>';return;}
-  var h='<table class="st"><thead><tr><th></th><th>金額</th></tr></thead><tbody>';
-  h+='<tr><td class="ml">想定期待値の合計</td><td class="'+gc(evSum)+'" style="font-weight:600">'+fm(evSum)+'</td></tr>';
-  h+='<tr><td class="ml">実際の収支合計</td><td class="'+gc(plSum)+'" style="font-weight:600">'+fm(plSum)+'</td></tr>';
-  h+='<tr><td class="ml">差（実績-想定）</td><td class="'+gc(plSum-evSum)+'">'+fm(plSum-evSum)+'</td></tr>';
-  h+='</tbody></table>';
-  h+='<p style="font-size:11px;color:#94a3b8;margin-top:8px">対象 '+cnt+'件。件数が増えるほど、想定機械割の見立てが正しいかが分かります（実績はブレるので30件以上で判断推奨）</p>';
-  el.innerHTML=h;
 }
 // ===== 分析タブ（v3） =====
 function dayMap(){
@@ -1456,8 +1316,6 @@ function setTheme(t){
   window.addEventListener('DOMContentLoaded',function(){setTheme(t);});
 })();
 function refresh(){
-  payoutModel=estimateReuse(R);
-  updateEvInfo();
   rSummary();rRecent();
   if(document.getElementById('t-history').classList.contains('on'))rHist();
   if(document.getElementById('t-stats').classList.contains('on'))rPayoutStats();
