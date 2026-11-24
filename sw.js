@@ -1,6 +1,6 @@
 // スロット収支管理 Service Worker v2
 // index.html はネット優先（更新が即反映）、オフライン時はキャッシュで動く
-var CACHE = 'slot-tracker-v3';
+var CACHE = 'slot-tracker-v4';
 var ASSETS = ['./', './index.html', './manifest.json'];
 
 self.addEventListener('install', function(e) {
@@ -8,7 +8,7 @@ self.addEventListener('install', function(e) {
 });
 self.addEventListener('activate', function(e) {
   e.waitUntil(caches.keys().then(function(keys) {
-    return Promise.all(keys.filter(function(k){ return k !== CACHE; }).map(function(k){ return caches.delete(k); }));
+    return Promise.all(keys.filter(function(k){ return k.startsWith('slot-tracker-') && k !== CACHE; }).map(function(k){ return caches.delete(k); }));
   }).then(function(){ return self.clients.claim(); }));
 });
 self.addEventListener('fetch', function(e) {

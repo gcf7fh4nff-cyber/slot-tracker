@@ -102,6 +102,13 @@ body[data-theme="light"]{
 .ana-card .t{font-size:10px;color:var(--mut);letter-spacing:1px}
 .ana-card .n{font-size:17px;font-weight:800;margin-top:2px}
 .ana-card .s{font-size:10px;color:var(--mut);margin-top:2px;opacity:.8}
+.payout-head{display:flex;align-items:baseline;justify-content:space-between;gap:8px;margin-bottom:12px}
+.payout-head .ct-t{margin:0}
+.payout-head select{font:inherit;font-size:13px;color:var(--txt);background:var(--sub);border:1px solid var(--line);border-radius:7px;padding:5px 8px}
+.payout-preview{font-size:12px;color:var(--txt);background:var(--sub);border-radius:8px;padding:8px 10px;margin-bottom:12px}
+.payout-note{font-size:12px;color:var(--mut);margin-top:8px}
+.payout-note summary{cursor:pointer;color:var(--acc)}
+.payout-note p{margin-top:4px}
 .hm-wrap{overflow-x:auto;padding-bottom:4px}
 .hm-grid{display:grid;grid-auto-flow:column;grid-template-rows:repeat(7,13px);gap:3px;width:max-content}
 .hm-cell{width:13px;height:13px;border-radius:3px;background:var(--sub)}
@@ -178,9 +185,11 @@ svg text{font-family:-apple-system,BlinkMacSystemFont,'Hiragino Sans',sans-serif
         <div id="dtlBox" style="display:none;border-top:1px dashed var(--line);padding-top:12px;margin-top:4px">
           <div class="fg"><label>台番（任意）</label><input type="text" id="iDai" placeholder="例：831" inputmode="numeric"></div>
           <div class="fr">
-            <div class="fg"><label>打ち始めG数（任意）</label><input type="number" id="iGs" placeholder="例：350" inputmode="numeric" oninput="updateEvInfo()"></div>
-            <div class="fg"><label>打ち終わりG数（任意）</label><input type="number" id="iGe" placeholder="例：5350" inputmode="numeric" oninput="updateEvInfo()"></div>
+            <div class="fg"><label for="iGs">打ち始めG数（任意）</label><input type="number" id="iGs" placeholder="例：350" min="0" inputmode="numeric" oninput="updateEvInfo()"></div>
+            <div class="fg"><label for="iGe">打ち終わりG数（任意）</label><input type="number" id="iGe" placeholder="例：5350" min="0" inputmode="numeric" oninput="updateEvInfo()"></div>
           </div>
+          <div class="fg"><label for="iG">回したG数（合計を直接入力する場合）</label><input type="number" id="iG" min="1" inputmode="numeric" placeholder="AT・ボーナス中を含む" oninput="updateEvInfo()"></div>
+          <div class="payout-preview" id="iPayout" aria-live="polite"></div>
           <div class="fg"><label>想定機械割％（任意）</label><input type="number" id="iRate" placeholder="例：105.5" step="0.1" inputmode="decimal" oninput="updateEvInfo()"></div>
           <div id="evInfo" style="font-size:12px;color:var(--acc);margin:-6px 0 10px;display:none"></div>
           <div class="fg"><label>台を選んだ根拠（任意・1タップ）</label>
@@ -225,6 +234,23 @@ svg text{font-family:-apple-system,BlinkMacSystemFont,'Hiragino Sans',sans-serif
   </div>
 
   <div class="tc" id="t-stats">
+    <div class="cd">
+      <div class="payout-head">
+        <div class="ct-t">実戦の出玉（推定）</div>
+        <select id="payoutPeriod" aria-label="実戦の出玉の集計期間" onchange="rPayoutStats()">
+          <option value="all">全期間</option><option value="month">今月</option><option value="3m">3ヶ月</option><option value="6m">半年</option><option value="1y">1年</option><option value="2y">2年</option><option value="3y">3年</option>
+        </select>
+      </div>
+      <div class="ana-grid">
+        <div class="ana-card"><div class="t">総払い出し枚数</div><div class="n" id="payoutCoins">N/A</div></div>
+        <div class="ana-card"><div class="t">実戦機械割</div><div class="n" id="payoutRate">N/A</div></div>
+      </div>
+      <p class="payout-note" id="payoutCoverage"></p>
+      <details class="payout-note"><summary>計算方法</summary>
+        <p>AT・ボーナス中を含む実戦G数 × 3枚を総投入とします。総払い出しは総投入 ＋ 実戦差枚。期間の機械割は、対象記録の総払い出し ÷ 総投入 × 100で求めます。</p>
+        <p>差枚は回収枚数から投資枚数を引いた値です。円だけの記録は1枚20円で換算するため、貸出・交換条件によって実際の枚数と差が出ます。</p>
+      </details>
+    </div>
     <div class="cd"><div class="ct-t">月別集計</div><div id="mStats"></div></div>
     <div class="cd"><div class="ct-t">根拠別集計（どの情報源が儲かるか）</div><div id="bStats"></div></div>
     <div class="cd"><div class="ct-t">期待値の答え合わせ（想定 vs 実績）</div><div id="evStats"></div></div>
@@ -298,7 +324,7 @@ svg text{font-family:-apple-system,BlinkMacSystemFont,'Hiragino Sans',sans-serif
         <p><b>1.</b> 「記録」タブで日付・店舗名・機種名・投資額・回収額を入力</p>
         <p><b>2.</b> 収支は自動で計算されます</p>
         <p><b>3.</b> 「履歴」で過去の記録を確認・編集・削除</p>
-        <p><b>4.</b> 「集計」で月別・機種別の成績を確認</p>
+        <p><b>4.</b> 「集計」で総払い出し枚数・実戦機械割や、月別・機種別の成績を確認</p>
         <p><b>5.</b> 「グラフ」でスランプグラフを確認</p>
         <p><b>6.</b> 「設定」で店舗ごとの貯メダル初期枚数を管理</p>
         <p style="margin-top:8px"><b>ホーム画面に追加：</b><br>Safari で開く → 共有ボタン → 「ホーム画面に追加」</p>
@@ -307,7 +333,7 @@ svg text{font-family:-apple-system,BlinkMacSystemFont,'Hiragino Sans',sans-serif
   </div>
 </div>
 
-<div class="mo" id="edMo">
+<div class="mo" id="edMo" oninput="updateFormPayout('e')">
   <div class="md">
     <h3>記録を編集</h3>
     <div class="fg"><label>日付</label><input type="date" id="eDate"></div>
@@ -324,9 +350,11 @@ svg text{font-family:-apple-system,BlinkMacSystemFont,'Hiragino Sans',sans-serif
     <div class="fg"><label>メモ</label><input type="text" id="eMemo"></div>
     <div class="fg"><label>台番</label><input type="text" id="eDai" placeholder="なし"></div>
     <div class="fr">
-      <div class="fg"><label>打ち始めG数</label><input type="number" id="eGs" placeholder="なし"></div>
-      <div class="fg"><label>打ち終わりG数</label><input type="number" id="eGe" placeholder="なし"></div>
+      <div class="fg"><label for="eGs">打ち始めG数</label><input type="number" id="eGs" min="0" placeholder="なし"></div>
+      <div class="fg"><label for="eGe">打ち終わりG数</label><input type="number" id="eGe" min="0" placeholder="なし"></div>
     </div>
+    <div class="fg"><label for="eG">回したG数（合計を直接入力する場合）</label><input type="number" id="eG" min="1" inputmode="numeric" placeholder="AT・ボーナス中を含む"></div>
+    <div class="payout-preview" id="ePayout" aria-live="polite"></div>
     <div class="fr">
       <div class="fg"><label>想定機械割％</label><input type="number" id="eRate" step="0.1" placeholder="なし"></div>
       <div class="fg"><label>根拠</label><select id="eBasis"><option value="">なし</option><option>SNS示唆</option><option>ポエム</option><option>データ予測</option><option>肌感</option><option>ハイエナ</option><option>その他</option></select></div>
@@ -510,19 +538,19 @@ function setUnit(u){
     mb.style.background='transparent';mb.style.color='var(--mut)';
     document.getElementById('lInv').textContent='投資額（円）';
     document.getElementById('lRet').textContent='回収額（円）';
-    document.getElementById('convertInfo').style.display='none';
   }else{
     mb.style.background='var(--acc)';mb.style.color='#fff';
     yb.style.background='transparent';yb.style.color='var(--mut)';
     document.getElementById('lInv').textContent='投資（枚数）';
     document.getElementById('lRet').textContent='回収（枚数）';
-    updateConvertInfo();
   }
+  updateConvertInfo();
 }
 function updateConvertInfo(){
+  updateEvInfo();
   if(curUnit!=='medal'){document.getElementById('convertInfo').style.display='none';return;}
-  var inv=parseInt(document.getElementById('iInv').value)||0;
-  var ret=parseInt(document.getElementById('iRet').value)||0;
+  var inv=Number(document.getElementById('iInv').value)||0;
+  var ret=Number(document.getElementById('iRet').value)||0;
   if(inv===0&&ret===0){document.getElementById('convertInfo').style.display='none';return;}
   var yInv=inv*MEDAL_RATE,yRet=ret*MEDAL_RATE,pl=yRet-yInv;
   document.getElementById('convertInfo').innerHTML='→ 投資 '+yInv.toLocaleString()+'円 / 回収 '+yRet.toLocaleString()+'円（収支 '+fm(pl)+'円）';
@@ -545,7 +573,7 @@ function switchTab(name){
   tabs[idx].classList.add('on');
   contents[idx].classList.add('on');
   if(name==='history')rHist();
-  if(name==='stats'){rMonth();rBasis();rEv();rMc();}
+  if(name==='stats'){rPayoutStats();rMonth();rBasis();rEv();rMc();}
   if(name==='graph'){rSlump();rBar();}
   if(name==='analy'){rAnaly();}
   if(name==='settings')renderShopSettings();
@@ -553,11 +581,12 @@ function switchTab(name){
 
 // --- Input ---
 async function addRec(){
+  if(!validPayoutInputs('i'))return;
   var date=document.getElementById('iDate').value;
   var shop=document.getElementById('iShop').value.trim();
   var mc=document.getElementById('iMc').value.trim();
-  var inv=parseInt(document.getElementById('iInv').value)||0;
-  var ret=parseInt(document.getElementById('iRet').value)||0;
+  var inv=Number(document.getElementById('iInv').value)||0;
+  var ret=Number(document.getElementById('iRet').value)||0;
   var memo=document.getElementById('iMemo').value.trim();
   if(!date){toast('日付を入力してください');return;}
   if(!mc){toast('機種名を入力してください');return;}
@@ -569,13 +598,9 @@ async function addRec(){
   if(mInv!==null){rec.mInv=mInv;rec.mRet=mRet;}
   // 詳細記録（任意）
   var dai=document.getElementById('iDai').value.trim();
-  var gsv=document.getElementById('iGs').value,gev=document.getElementById('iGe').value;
-  var g=getInputG();
   var rate=parseFloat(document.getElementById('iRate').value)||0;
   if(dai)rec.dai=dai;
-  if(gsv!=='')rec.gs=parseInt(gsv)||0;
-  if(gev!=='')rec.ge=parseInt(gev)||0;
-  if(g>0)rec.g=g;
+  Object.assign(rec,formGameFields('i'));
   if(rate>0)rec.rate=rate;
   if(curBasis)rec.basis=curBasis;
   if(curKaku)rec.kaku=curKaku;
@@ -584,8 +609,8 @@ async function addRec(){
     var sm=getShopMedals();
     if(sm[shop]==null){sm[shop]=0;await saveShopMedals(sm);updateShopDropdown();}
   }
-  R.push(rec);sortR();
   await dbPutRecord(rec);
+  R.push(rec);sortR();
   document.getElementById('iMc').value='';
   document.getElementById('iInv').value='';
   document.getElementById('iRet').value='';
@@ -593,10 +618,10 @@ async function addRec(){
   document.getElementById('iDai').value='';
   document.getElementById('iGs').value='';
   document.getElementById('iGe').value='';
+  document.getElementById('iG').value='';
   document.getElementById('iRate').value='';
   clearChips();
-  document.getElementById('evInfo').style.display='none';
-  document.getElementById('convertInfo').style.display='none';
+  updateConvertInfo();
   initDate();
   toast('記録しました（'+fm(pl)+'円）');
   refresh();
@@ -712,11 +737,7 @@ function rRecent(){
   for(var i=R.length-1;i>=R.length-n;i--){
     var r=R[i];
     h+='<div class="hi"><div class="hl"><div class="hd2">'+fd(r.date)+(r.shop?' @ '+esc(r.shop):'')+'</div><div class="hm">'+esc(r.machine)+'</div>';
-    var dtl='投資 '+r.invest.toLocaleString()+' / 回収 '+r.ret.toLocaleString();
-    if(r.mInv!=null)dtl+=' ('+r.mInv.toLocaleString()+'枚→'+r.mRet.toLocaleString()+'枚)';
-    dtl+=dtlTags(r);
-    if(r.memo)dtl+=' / '+esc(r.memo);
-    h+='<div class="hdt">'+dtl+'</div></div>';
+    h+=recordDetails(r)+'</div>';
     h+='<div class="hr"><div class="hp '+gc(r.pl)+'">'+fm(r.pl)+'</div><div class="hc">累計 '+fm(cm[r.id])+'</div></div></div>';
   }
   el.innerHTML=h;
@@ -755,11 +776,7 @@ function rHist(){
   for(var i=f.length-1;i>=0;i--){
     var r=f[i];
     h+='<div class="hi"><div class="hl"><div class="hd2">'+fd(r.date)+(r.shop?' @ '+esc(r.shop):'')+'</div><div class="hm">'+esc(r.machine)+'</div>';
-    var dtl2='投資 '+r.invest.toLocaleString()+' / 回収 '+r.ret.toLocaleString();
-    if(r.mInv!=null)dtl2+=' ('+r.mInv.toLocaleString()+'枚→'+r.mRet.toLocaleString()+'枚)';
-    dtl2+=dtlTags(r);
-    if(r.memo)dtl2+=' / '+esc(r.memo);
-    h+='<div class="hdt">'+dtl2+'</div></div>';
+    h+=recordDetails(r)+'</div>';
     h+='<div class="hr"><div class="hp '+gc(r.pl)+'">'+fm(r.pl)+'</div><div class="hc">累計 '+fm(cm[r.id])+'</div>';
     h+='<div class="ha"><button class="bi edt" onclick="openEd(\''+r.id+'\')">✏️</button>';
     h+='<button class="bi del" onclick="delRec(\''+r.id+'\')">🗑</button></div></div></div>';
@@ -781,37 +798,37 @@ function openEd(id){
   document.getElementById('eMemo').value=r.memo||'';
   document.getElementById('eDai').value=r.dai||'';
   document.getElementById('eGs').value=r.gs!=null?r.gs:'';
-  document.getElementById('eGe').value=r.ge!=null?r.ge:(r.g!=null&&r.gs!=null?r.gs+r.g:'');
+  document.getElementById('eGe').value=r.ge!=null?r.ge:'';
+  document.getElementById('eG').value=hasGameRange(r)?'':(r.g??'');
   document.getElementById('eRate').value=r.rate!=null?r.rate:'';
   document.getElementById('eBasis').value=r.basis||'';
   document.getElementById('eKaku').value=r.kaku||'';
+  updateFormPayout('e');
   document.getElementById('edMo').classList.add('sh');
 }
 async function saveEd(){
+  if(!validPayoutInputs('e'))return;
   var updatedRec=null;
   for(var i=0;i<R.length;i++){
     if(R[i].id===edId){
       R[i].date=document.getElementById('eDate').value;
       R[i].shop=document.getElementById('eShop').value.trim();
       R[i].machine=document.getElementById('eMc').value.trim();
-      R[i].invest=parseInt(document.getElementById('eInv').value)||0;
-      R[i].ret=parseInt(document.getElementById('eRet').value)||0;
+      R[i].invest=Number(document.getElementById('eInv').value)||0;
+      R[i].ret=Number(document.getElementById('eRet').value)||0;
       R[i].pl=R[i].ret-R[i].invest;
       var emInv=document.getElementById('eMInv').value;
       var emRet=document.getElementById('eMRet').value;
-      if(emInv!==''){R[i].mInv=parseInt(emInv)||0;R[i].mRet=parseInt(emRet)||0;}
+      if(emInv!==''||emRet!==''){R[i].mInv=Number(emInv)||0;R[i].mRet=Number(emRet)||0;}
       else{delete R[i].mInv;delete R[i].mRet;}
       R[i].memo=document.getElementById('eMemo').value.trim();
       var ed=document.getElementById('eDai').value.trim();
-      var egs=document.getElementById('eGs').value,ege=document.getElementById('eGe').value;
-      var eg=(egs!==''&&ege!=='')?Math.max(0,(parseInt(ege)||0)-(parseInt(egs)||0)):(R[i].g||0);
-      if(egs!=='')R[i].gs=parseInt(egs)||0;else delete R[i].gs;
-      if(ege!=='')R[i].ge=parseInt(ege)||0;else delete R[i].ge;
+      delete R[i].gs;delete R[i].ge;delete R[i].g;
+      Object.assign(R[i],formGameFields('e'));
       var er=parseFloat(document.getElementById('eRate').value)||0;
       var eb=document.getElementById('eBasis').value;
       var ek=document.getElementById('eKaku').value;
       if(ed)R[i].dai=ed;else delete R[i].dai;
-      if(eg>0)R[i].g=eg;else delete R[i].g;
       if(er>0)R[i].rate=er;else delete R[i].rate;
       if(eb)R[i].basis=eb;else delete R[i].basis;
       if(ek)R[i].kaku=ek;else delete R[i].kaku;
@@ -1086,15 +1103,79 @@ function clearChips(){
   for(var i=0;i<b.length;i++)b[i].classList.remove('on');
 }
 // 想定期待値: G数×3枚×(機械割-100%)
-function calcEv(g,rate){return Math.round(g*3*(rate/100-1));}
-function getInputG(){
-  var gs=document.getElementById('iGs').value,ge=document.getElementById('iGe').value;
-  if(gs===''||ge==='')return 0;
-  var g=(parseInt(ge)||0)-(parseInt(gs)||0);
-  return g>0?g:0;
+const MEDALS_PER_GAME=3;
+function calcEv(g,rate){return Math.round(g*MEDALS_PER_GAME*(rate/100-1));}
+
+function wholeCount(value){
+  if(typeof value!=='number' && (typeof value!=='string' || value.trim()===''))return null;
+  const count=Number(value);
+  return Number.isSafeInteger(count) && count>=0 ? count : null;
+}
+function hasGameRange(record){
+  return record.gs!=null && record.gs!=='' && record.ge!=null && record.ge!=='';
+}
+function validPayoutInputs(prefix){
+  const suffixes=['Inv','Ret','Gs','Ge','G'];
+  if(prefix==='e')suffixes.push('MInv','MRet');
+  return suffixes.every(suffix=>document.getElementById(prefix+suffix).reportValidity());
+}
+function playedGames(record){
+  if(hasGameRange(record)){
+    const start=wholeCount(record.gs);
+    const end=wholeCount(record.ge);
+    return start!==null && end!==null && end>start ? end-start : 0;
+  }
+  return wholeCount(record.g)||0;
+}
+function formGameFields(prefix){
+  const start=document.getElementById(prefix+'Gs').value;
+  const end=document.getElementById(prefix+'Ge').value;
+  const fields={};
+  if(start!=='')fields.gs=Number(start);
+  if(end!=='')fields.ge=Number(end);
+  fields.g=document.getElementById(prefix+'G').value;
+  const games=playedGames(fields);
+  if(games>0)fields.g=games;else delete fields.g;
+  return fields;
+}
+function recordPayout(record){
+  const games=playedGames(record);
+  if(!games)return {reason:hasGameRange(record)?'開始・終了G数を要確認':'実戦G数不足'};
+  const fromYen=record.mInv==null && record.mRet==null;
+  const invested=wholeCount(fromYen?record.invest:record.mInv);
+  const returned=wholeCount(fromYen?record.ret:record.mRet);
+  if(invested===null || returned===null)return {reason:'投資・回収を要確認'};
+  const coinsIn=games*MEDALS_PER_GAME;
+  const coinsOut=coinsIn+(returned-invested)/(fromYen?MEDAL_RATE:1);
+  if(coinsOut<0)return {reason:'G数・差枚を要確認'};
+  return {coinsIn,coinsOut,fromYen};
+}
+function formatCoins(value){return Math.round(value).toLocaleString('ja-JP')+'枚';}
+function formatPayoutRate(coinsOut,coinsIn){return (coinsOut/coinsIn*100).toFixed(1)+'%';}
+function payoutLine(result){
+  if(result.reason)return '総払い出し・実戦機械割 N/A（'+result.reason+'）';
+  return '総払い出し '+formatCoins(result.coinsOut)+' ／ 実戦機械割 '+formatPayoutRate(result.coinsOut,result.coinsIn)
+    +(result.fromYen?'（推定・20円/枚換算）':'（推定）');
+}
+function updateFormPayout(prefix){
+  const fields=formGameFields(prefix);
+  const directGames=document.getElementById(prefix+'G');
+  directGames.disabled=hasGameRange(fields);
+  directGames.parentElement.hidden=directGames.disabled;
+  const useMedals=prefix==='i' ? curUnit==='medal' :
+    document.getElementById('eMInv').value!=='' || document.getElementById('eMRet').value!=='';
+  const amountPrefix=prefix==='e' && useMedals ? 'eM' : prefix;
+  const invested=document.getElementById(amountPrefix+'Inv').value;
+  const returned=document.getElementById(amountPrefix+'Ret').value;
+  if(invested!=='' || returned!==''){
+    fields[useMedals?'mInv':'invest']=invested||0;
+    fields[useMedals?'mRet':'ret']=returned||0;
+  }
+  document.getElementById(prefix+'Payout').textContent=payoutLine(recordPayout(fields));
+  return fields.g||0;
 }
 function updateEvInfo(){
-  var g=getInputG();
+  var g=updateFormPayout('i');
   var rate=parseFloat(document.getElementById('iRate').value)||0;
   var el=document.getElementById('evInfo');
   if(g>0){
@@ -1103,14 +1184,41 @@ function updateEvInfo(){
     el.textContent=t;el.style.display='block';
   }else{el.style.display='none';}
 }
-function dtlTags(r){
-  var t='';
+function recordDetails(r){
+  var amounts='投資 '+(r.invest??'—').toLocaleString()+' / 回収 '+(r.ret??'—').toLocaleString();
+  if(r.mInv!=null && r.mRet!=null)amounts+=' ('+r.mInv.toLocaleString()+'枚→'+r.mRet.toLocaleString()+'枚)';
+  var t=esc(amounts);
+  var games=playedGames(r);
   if(r.dai)t+=' / #'+esc(r.dai);
-  if(r.g)t+=' / '+r.g.toLocaleString()+'G回し';
-  if(r.gs!=null&&!r.g)t+=' / 打始'+r.gs+'G';
+  if(games)t+=' / '+games.toLocaleString()+'G回し';
+  if(r.gs!=null&&!games)t+=' / 打始'+esc(r.gs)+'G';
   if(r.basis)t+=' / '+esc(r.basis);
   if(r.kaku)t+=' / '+esc(r.kaku);
-  return t;
+  if(r.memo)t+=' / '+esc(r.memo);
+  return '<div class="hdt">'+t+'</div><div class="hdt">'+payoutLine(recordPayout(r))+'</div>';
+}
+function rPayoutStats(){
+  const records=filterByPeriod(document.getElementById('payoutPeriod').value);
+  let coinsIn=0,coinsOut=0,included=0,fromYen=0;
+  const skipped=new Map();
+  for(const record of records){
+    const result=recordPayout(record);
+    if(result.reason){
+      skipped.set(result.reason,(skipped.get(result.reason)||0)+1);
+      continue;
+    }
+    coinsIn+=result.coinsIn;
+    coinsOut+=result.coinsOut;
+    included++;
+    if(result.fromYen)fromYen++;
+  }
+  document.getElementById('payoutCoins').textContent=included?formatCoins(coinsOut):'N/A';
+  document.getElementById('payoutRate').textContent=included?formatPayoutRate(coinsOut,coinsIn):'N/A';
+  const notes=['計算対象 '+included+' / '+records.length+'件'];
+  if(included)notes.push('総投入 '+formatCoins(coinsIn));
+  if(fromYen)notes.push('うち円換算 '+fromYen+'件');
+  for(const [reason,count] of skipped)notes.push(reason+' '+count+'件');
+  document.getElementById('payoutCoverage').textContent=notes.join(' ／ ');
 }
 // --- 根拠別集計 ---
 function rBasis(){
@@ -1265,7 +1373,11 @@ function setTheme(t){
   document.body.dataset.theme=t;
   window.addEventListener('DOMContentLoaded',function(){setTheme(t);});
 })();
-function refresh(){rSummary();rRecent();}
+function refresh(){
+  rSummary();rRecent();
+  if(document.getElementById('t-history').classList.contains('on'))rHist();
+  if(document.getElementById('t-stats').classList.contains('on'))rPayoutStats();
+}
 
 // ===== Service Worker登録 (PWAオフライン対応) =====
 if('serviceWorker' in navigator){
@@ -1281,6 +1393,7 @@ if('serviceWorker' in navigator){
   try{
     await initData();
     initDate();
+    updateEvInfo();
     renderShopSettings();
     updateShopDropdown();
     refresh();
